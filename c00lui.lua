@@ -7,13 +7,15 @@ function c00lgui.Window(config)
     win.accent = config.AccentColor or Color3.fromRGB(255,0,0)
     win.bg = Color3.fromRGB(0,0,0)
     win.text = Color3.fromRGB(255,255,255)
+    win.pages = {}
+    win.current = 1
 
     local sg = Instance.new("ScreenGui", game.CoreGui)
     sg.ResetOnSpawn = false
 
     local mf = Instance.new("Frame", sg)
     mf.Size = UDim2.new(0,300,0,400)
-    mf.Position = UDim2.new(0,10,0.3,0)  -- Posição antiga
+    mf.Position = UDim2.new(0,10,0.3,0)
     mf.BackgroundColor3 = win.bg
     mf.BorderColor3 = win.accent
     mf.BorderSizePixel = 3
@@ -26,7 +28,6 @@ function c00lgui.Window(config)
     title.BorderSizePixel = 3
     title.TextColor3 = win.text
     title.TextSize = 18
-    title.Font = Enum.Font.SourceSansBold
 
     local nav = Instance.new("Frame", mf)
     nav.Size = UDim2.new(1,0,0,40)
@@ -45,6 +46,13 @@ function c00lgui.Window(config)
     left.BorderColor3 = win.accent
     left.BorderSizePixel = 3
     left.TextColor3 = win.text
+    left.MouseButton1Click:Connect(function()
+        if win.current > 1 then
+            win.pages[win.current].Visible = false
+            win.current = win.current - 1
+            win.pages[win.current].Visible = true
+        end
+    end)
 
     local right = Instance.new("TextButton", nav)
     right.Size = UDim2.new(0.5,-6,1,-6)
@@ -55,6 +63,13 @@ function c00lgui.Window(config)
     right.BorderColor3 = win.accent
     right.BorderSizePixel = 3
     right.TextColor3 = win.text
+    right.MouseButton1Click:Connect(function()
+        if win.current < #win.pages then
+            win.pages[win.current].Visible = false
+            win.current = win.current + 1
+            win.pages[win.current].Visible = true
+        end
+    end)
 
     local container = Instance.new("Frame", mf)
     container.Size = UDim2.new(1,0,1,-70)
@@ -75,51 +90,64 @@ function c00lgui.Window(config)
         toggleBtn.Text = mf.Visible and "Close" or "Open"
     end)
 
-    function win:AddSection(name)
-        local col = (#container:GetChildren() % 2 == 1) and 0 or 0.5
-        local sec = Instance.new("Frame", container)
-        sec.Size = UDim2.new(0.5,0,1,0)  -- Encostadas
-        sec.Position = UDim2.new(col,0,0,0)
-        sec.BackgroundColor3 = win.bg
-        sec.BorderColor3 = win.accent
-        sec.BorderSizePixel = 3
+    function win:AddPage()
+        local page = Instance.new("Frame", container)
+        page.Size = UDim2.new(1,0,1,0)
+        page.BackgroundTransparency = 1
+        page.Visible = (#win.pages == 0)
+        table.insert(win.pages, page)
 
-        local tit = Instance.new("TextLabel", sec)
-        tit.Size = UDim2.new(1,0,0,25)
-        tit.Text = name
-        tit.TextColor3 = win.text
-        tit.BackgroundColor3 = win.bg
-        tit.BorderColor3 = win.accent
-        tit.BorderSizePixel = 3
-        tit.TextSize = 16
+        local sectionCount = 0
 
-        local content = Instance.new("Frame", sec)
-        content.Size = UDim2.new(1,0,1,-25)
-        content.Position = UDim2.new(0,0,0,25)
-        content.BackgroundTransparency = 1
+        function page:AddSection(name)
+            sectionCount = sectionCount + 1
+            local col = (sectionCount % 2 == 1) and 0 or 0.5
+            local sec = Instance.new("Frame", page)
+            sec.Size = UDim2.new(0.5,0,1,0)
+            sec.Position = UDim2.new(col,0,0,0)
+            sec.BackgroundColor3 = win.bg
+            sec.BorderColor3 = win.accent
+            sec.BorderSizePixel = 3
 
-        local grid = Instance.new("UIGridLayout", content)
-        grid.CellSize = UDim2.new(0.5,0,0,30)
-        grid.CellPadding = UDim2.new(0,0,0,0)  -- Encostados total
-        grid.SortOrder = Enum.SortOrder.LayoutOrder
+            local tit = Instance.new("TextLabel", sec)
+            tit.Size = UDim2.new(1,0,0,25)
+            tit.Text = name
+            tit.TextColor3 = win.text
+            tit.BackgroundColor3 = win.bg
+            tit.BorderColor3 = win.accent
+            tit.BorderSizePixel = 3
+            tit.TextSize = 16
 
-        local section = {}
+            local content = Instance.new("Frame", sec)
+            content.Size = UDim2.new(1,0,1,-25)
+            content.Position = UDim2.new(0,0,0,25)
+            content.BackgroundTransparency = 1
 
-        function section:AddButton(txt, cb)
-            local btn = Instance.new("TextButton")
-            btn.Text = txt
-            btn.BackgroundColor3 = win.bg
-            btn.BorderColor3 = win.accent
-            btn.BorderSizePixel = 3
-            btn.TextColor3 = win.text
-            btn.TextSize = 12
-            btn.TextWrapped = true
-            btn.TextXAlignment = Enum.TextXAlignment.Center
-            btn.Parent = content
-            if cb then btn.MouseButton1Click:Connect(cb) end
+            local grid = Instance.new("UIGridLayout", content)
+            grid.CellSize = UDim2.new(0.5,0,0,30)
+            grid.CellPadding = UDim2.new(0,0,0,0)
+            grid.SortOrder = Enum.SortOrder.LayoutOrder
+
+            local section = {}
+
+            function section:AddButton(txt, cb)
+                local btn = Instance.new("TextButton")
+                btn.Text = txt
+                btn.BackgroundColor3 = win.bg
+                btn.BorderColor3 = win.accent
+                btn.BorderSizePixel = 3
+                btn.TextColor3 = win.text
+                btn.TextSize = 12
+                btn.TextWrapped = true
+                btn.TextXAlignment = Enum.TextXAlignment.Center
+                btn.Parent = content
+                if cb then btn.MouseButton1Click:Connect(cb) end
+            end
+
+            return section
         end
 
-        return section
+        return page
     end
 
     return win
