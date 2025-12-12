@@ -34,25 +34,28 @@ function c00lgui.Window(config)
     nav.BackgroundColor3 = win.bg
     nav.BorderSizePixel = 0
 
-    local left = Instance.new("TextButton", nav)
-    left.Size = UDim2.new(0.5,-8,1,-8)
-    left.Position = UDim2.new(0,4,0,4)
-    left.Text = "<"
-    left.TextScaled = true
-    left.BackgroundColor3 = win.bg
-    left.BorderColor3 = win.accent
-    left.BorderSizePixel = 3
-    left.TextColor3 = win.text
+-- BOTÃO < (igual da segunda versão)
+local left = Instance.new("TextButton", nav)
+left.Size = UDim2.new(0.5,-6,1,-6)
+left.Position = UDim2.new(0,3,0,3)
+left.Text = "<"
+left.TextScaled = true
+left.BackgroundColor3 = win.bg
+left.BorderColor3 = win.accent
+left.BorderSizePixel = 3
+left.TextColor3 = win.text
 
-    local right = Instance.new("TextButton", nav)
-    right.Size = UDim2.new(0.5,-8,1,-8)
-    right.Position = UDim2.new(0.5,4,0,4)
-    right.Text = ">"
-    right.TextScaled = true
-    right.BackgroundColor3 = win.bg
-    right.BorderColor3 = win.accent
-    right.BorderSizePixel = 3
-    right.TextColor3 = win.text
+-- BOTÃO > (igual da segunda versão)
+local right = Instance.new("TextButton", nav)
+right.Size = UDim2.new(0.5,-6,1,-6)
+right.Position = UDim2.new(0.5,3,0,3)
+right.Text = ">"
+right.TextScaled = true
+right.BackgroundColor3 = win.bg
+right.BorderColor3 = win.accent
+right.BorderSizePixel = 3
+right.TextColor3 = win.text
+
 
     local container = Instance.new("Frame", mf)
     container.Size = UDim2.new(1,0,1,-75)
