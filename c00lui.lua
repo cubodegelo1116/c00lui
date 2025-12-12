@@ -48,9 +48,9 @@ function c00lgui.Window(config)
     left.TextColor3 = win.text
     left.MouseButton1Click:Connect(function()
         if win.current > 1 then
-            win.pages[win.current].Visible = false
+            win.pages[win.current].frame.Visible = false
             win.current = win.current - 1
-            win.pages[win.current].Visible = true
+            win.pages[win.current].frame.Visible = true
         end
     end)
 
@@ -65,9 +65,9 @@ function c00lgui.Window(config)
     right.TextColor3 = win.text
     right.MouseButton1Click:Connect(function()
         if win.current < #win.pages then
-            win.pages[win.current].Visible = false
+            win.pages[win.current].frame.Visible = false
             win.current = win.current + 1
-            win.pages[win.current].Visible = true
+            win.pages[win.current].frame.Visible = true
         end
     end)
 
@@ -91,18 +91,18 @@ function c00lgui.Window(config)
     end)
 
     function win:AddPage()
-        local page = Instance.new("Frame", container)
-        page.Size = UDim2.new(1,0,1,0)
-        page.BackgroundTransparency = 1
-        page.Visible = (#win.pages == 0)
-        table.insert(win.pages, page)
+        local pageframe = Instance.new("Frame", container)
+        pageframe.Size = UDim2.new(1,0,1,0)
+        pageframe.BackgroundTransparency = 1
+        pageframe.Visible = (#win.pages == 0)
 
+        local page = {frame = pageframe}
         local sectionCount = 0
 
         function page:AddSection(name)
             sectionCount = sectionCount + 1
             local col = (sectionCount % 2 == 1) and 0 or 0.5
-            local sec = Instance.new("Frame", page)
+            local sec = Instance.new("Frame", pageframe)
             sec.Size = UDim2.new(0.5,0,1,0)
             sec.Position = UDim2.new(col,0,0,0)
             sec.BackgroundColor3 = win.bg
@@ -147,6 +147,7 @@ function c00lgui.Window(config)
             return section
         end
 
+        table.insert(win.pages, {frame = pageframe})
         return page
     end
 
