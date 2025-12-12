@@ -41,19 +41,24 @@ function c00lgui.Window(config)
     nav.BorderSizePixel = 3
 
     local left = Instance.new("TextButton", nav)
-    left.Size = UDim2.new(0.5,0,1,0)
+    left.Size = UDim2.new(0.5,-2,1,0)
+    left.Position = UDim2.new(0,0,0,0)
     left.Text = "<"
     left.TextScaled = true
     left.BackgroundColor3 = self.bg
+    left.BorderColor3 = self.accent
+    left.BorderSizePixel = 3  -- BORDER GROSSA NOS <
     left.TextColor3 = self.text
     left.MouseButton1Click:Connect(function() self:PrevPage() end)
 
     local right = Instance.new("TextButton", nav)
-    right.Size = UDim2.new(0.5,0,1,0)
-    right.Position = UDim2.new(0.5,0,0,0)
+    right.Size = UDim2.new(0.5,-2,1,0)
+    right.Position = UDim2.new(0.5,2,0,0)
     right.Text = ">"
     right.TextScaled = true
     right.BackgroundColor3 = self.bg
+    right.BorderColor3 = self.accent
+    right.BorderSizePixel = 3  -- BORDER GROSSA NOS >
     right.TextColor3 = self.text
     right.MouseButton1Click:Connect(function() self:NextPage() end)
 
@@ -62,10 +67,9 @@ function c00lgui.Window(config)
     self.container.Position = UDim2.new(0,0,0,80)
     self.container.BackgroundTransparency = 1
 
-    -- BOTÃO DE CLOSE/OPEN FORA DA GUI (em baixo)
     local toggleBtn = Instance.new("TextButton", sg)
     toggleBtn.Size = UDim2.new(0,300,0,20)
-    toggleBtn.Position = UDim2.new(0,10,0.3,400)  -- embaixo da GUI
+    toggleBtn.Position = UDim2.new(0,10,0.3,400)
     toggleBtn.BackgroundColor3 = self.bg
     toggleBtn.BorderColor3 = self.accent
     toggleBtn.BorderSizePixel = 3
@@ -76,7 +80,6 @@ function c00lgui.Window(config)
         mf.Visible = not mf.Visible
         toggleBtn.Text = mf.Visible and "Close" or "Open"
     end)
-    self.toggleBtn = toggleBtn
 
     function self:AddPage()
         local pageframe = Instance.new("Frame", self.container)
@@ -84,8 +87,7 @@ function c00lgui.Window(config)
         pageframe.BackgroundTransparency = 1
         pageframe.Visible = (#self.pages == 0)
 
-        local page = setmetatable({frame = pageframe}, Page)
-        page.window = self
+        local page = setmetatable({frame = pageframe, window = self, sectionCount = 0}, Page)
         table.insert(self.pages, page)
         return page
     end
@@ -106,21 +108,15 @@ function c00lgui.Window(config)
         end
     end
 
-    function self:Toggle()
-        mf.Visible = not mf.Visible
-        self.toggleBtn.Text = mf.Visible and "Close" or "Open"
-    end
-
     return self
 end
-
--- Page e Section igual antes (copia da última versão que eu te passei, com coluna dupla)
 
 local Page = {}
 Page.__index = Page
 
 function Page:AddSection(name)
-    local col = (#self.frame:GetChildren() % 2 == 1) and 0 or 0.5
+    self.sectionCount = self.sectionCount + 1
+    local col = (self.sectionCount % 2 == 1) and 0 or 0.5
     local sec = Instance.new("Frame", self.frame)
     sec.Size = UDim2.new(0.5,-6,1,0)
     sec.Position = UDim2.new(col, col == 0 and 0 or 3,0,0)
@@ -154,7 +150,57 @@ function Page:AddSection(name)
         if cb then btn.MouseButton1Click:Connect(cb) end
     end
 
-    -- AddToggle e outros aqui se quiser
+    function section:AddToggle(txt, def, cb)
+        y = y + 35
+        local state = def or false
+        local frm = Instance.new("Frame", sec)
+        frm.Size = UDim2.new(1,-6,0,30)
+        frm.Position = UDim2.new(0,3,0,y)
+        frm.BackgroundTransparency = 1
+
+        local lbl = Instance.new("TextLabel", frm)
+        lbl.Size = UDim2.new(0.75,0,1,0)
+        lbl.Text = txt
+        lbl.TextColor3 = self.window.text
+        lbl.BackgroundTransparency = 1
+        lbl.TextXAlignment = Enum.TextXAlignment.Left
+
+        local tog = Instance.new("TextButton", frm)
+        tog.Size = UDim2.new(0.2,0,0.8,0)
+        tog.Position = UDim2.new(0.8,0,0.1,0)
+        tog.Text = state and "ON" or "OFF"
+        tog.BackgroundColor3 = state and self.window.accent or self.window.bg
+        tog.TextColor3 = self.window.text
+        tog.MouseButton1Click:Connect(function()
+            state = not state
+            tog.Text = state and "ON" or "OFF"
+            tog.BackgroundColor3 = state and self.window.accent or self.window.bg
+            if cb then cb(state) end
+        end)
+    end
+
+    function section:AddTextInput(placeholder, config)
+        config = config or {}
+        y = y + 35
+        local frm = Instance.new("Frame", sec)
+        frm.Size = UDim2.new(1,-6,,0,30)
+        frm.Position = UDim2.new(0,3,0,y)
+        frm.BackgroundColor3 = self.window.bg
+        frm.BorderColor3 = self.window.accent
+        frm.BorderSizePixel = 3
+
+        local box = Instance.new("TextBox", frm)
+        box.Size = UDim2.new(1,-6,0.8,0)
+        box.Position = UDim2.new(0,3,0.1,0)
+        box.PlaceholderText = placeholder
+        box.Text = config.DefaultText or ""
+        box.TextColor3 = self.window.text
+        box.BackgroundColor3 = self.window.bg
+        box.BorderColor3 = self.window.accent
+        box.BorderSizePixel = 1
+        if config.OnChange then box:GetPropertyChangedSignal("Text"):Connect(function() config.OnChange(box.Text) end) end
+        return {getText = function() return box.Text end, setText = function(t) box.Text = t end}
+    end
 
     return section
 end
