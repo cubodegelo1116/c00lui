@@ -3,7 +3,7 @@ local c00lgui = {}
 function c00lgui.Window(config)
     config = config or {}
     local win = {}
-    win.title = config.Title or "c00lgui"
+    win.title = config.Title or "Super Natural"
     win.accent = config.AccentColor or Color3.fromRGB(255,0,0)
     win.bg = Color3.fromRGB(0,0,0)
     win.text = Color3.fromRGB(255,255,255)
@@ -15,7 +15,7 @@ function c00lgui.Window(config)
 
     local mf = Instance.new("Frame", sg)
     mf.Size = UDim2.new(0,300,0,400)
-    mf.Position = UDim2.new(0,0,0,0)  -- Encostado no canto da tela
+    mf.Position = UDim2.new(0,0,0,0)  -- Encostado no canto
     mf.BackgroundColor3 = win.bg
     mf.BorderColor3 = win.accent
     mf.BorderSizePixel = 3
@@ -27,8 +27,8 @@ function c00lgui.Window(config)
     title.BorderColor3 = win.accent
     title.BorderSizePixel = 3
     title.TextColor3 = win.text
+    title.TextSize = 18  -- Texto do título menor
     title.Font = Enum.Font.SourceSansBold
-    title.TextSize = 18  -- Título menor
 
     local nav = Instance.new("Frame", mf)
     nav.Size = UDim2.new(1,0,0,40)
@@ -80,11 +80,14 @@ function c00lgui.Window(config)
         pageframe.Visible = (#win.pages == 0)
 
         local page = {frame = pageframe}
+        local sectionCount = 0
 
         function page:AddSection(name)
+            sectionCount = sectionCount + 1
+            local col = (sectionCount % 2 == 1) and 0 or 0.5
             local sec = Instance.new("Frame", pageframe)
-            sec.Size = UDim2.new(1,0,0,0)  -- Altura dinâmica
-            sec.Position = UDim2.new(0,0,0,0)
+            sec.Size = UDim2.new(0.5, -3,1,0)  -- Encostadas no meio (gap mínimo)
+            sec.Position = UDim2.new(col, col == 0 and 0 or 0,0,0)
             sec.BackgroundColor3 = win.bg
             sec.BorderColor3 = win.accent
             sec.BorderSizePixel = 3
@@ -96,38 +99,23 @@ function c00lgui.Window(config)
             tit.BackgroundColor3 = win.bg
             tit.BorderColor3 = win.accent
             tit.BorderSizePixel = 3
-            tit.TextSize = 16  -- Título da section menor
+            tit.TextSize = 16
 
-            local content = Instance.new("Frame", sec)
-            content.Size = UDim2.new(1,0,1,-25)
-            content.Position = UDim2.new(0,0,0,25)
-            content.BackgroundTransparency = 1
-
-            local grid = Instance.new("UIGridLayout", content)
-            grid.CellSize = UDim2.new(0.5,-3,0,30)  -- 2 colunas encostadas
-            grid.CellPadding = UDim2.new(0,0,0,3)
-            grid.SortOrder = Enum.SortOrder.LayoutOrder
-
-            local buttonCount = 0
-
+            local y = 25
             local section = {}
 
             function section:AddButton(txt, cb)
-                buttonCount = buttonCount + 1
-                local btn = Instance.new("TextButton")
+                y = y + 30  -- Encostados (altura do botão 30, incremento 30)
+                local btn = Instance.new("TextButton", sec)
+                btn.Size = UDim2.new(1,-6,0,30)
+                btn.Position = UDim2.new(0,3,0,y)
                 btn.Text = txt
                 btn.BackgroundColor3 = win.bg
                 btn.BorderColor3 = win.accent
                 btn.BorderSizePixel = 3
                 btn.TextColor3 = win.text
-                btn.TextSize = 14  -- Texto dos botões menor
-                btn.Parent = content
-                btn.LayoutOrder = buttonCount
+                btn.TextSize = 14  -- Texto menor
                 if cb then btn.MouseButton1Click:Connect(cb) end
-
-                -- Ajusta altura da section
-                local rows = math.ceil(buttonCount / 2)
-                sec.Size = UDim2.new(1,0,0,25 + rows * 33)
             end
 
             return section
