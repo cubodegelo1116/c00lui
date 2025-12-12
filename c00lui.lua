@@ -13,7 +13,6 @@ function c00lgui.Window(config)
     local sg = Instance.new("ScreenGui", game.CoreGui)
     sg.ResetOnSpawn = false
 
-    -- JANELA PRINCIPAL (Borda 3)
     local mf = Instance.new("Frame", sg)
     mf.Size = UDim2.new(0,300,0,400)
     mf.Position = UDim2.new(0,10,0.3,0)
@@ -21,26 +20,23 @@ function c00lgui.Window(config)
     mf.BorderColor3 = win.accent
     mf.BorderSizePixel = 3
 
-    -- TÍTULO (sem borda pra não duplicar)
     local title = Instance.new("TextLabel", mf)
     title.Size = UDim2.new(1,0,0,30)
     title.Text = win.title
     title.BackgroundColor3 = win.bg
-    title.BorderSizePixel = 0
+    title.BorderSizePixel = 0 -- evita borda dupla
     title.TextColor3 = win.text
     title.TextSize = 15
 
-    -- NAV (sem borda top, usa borda do mf)
     local nav = Instance.new("Frame", mf)
-    nav.Size = UDim2.new(1,0,0,40)
+    nav.Size = UDim2.new(1,0,0,45)
     nav.Position = UDim2.new(0,0,0,30)
     nav.BackgroundColor3 = win.bg
     nav.BorderSizePixel = 0
 
-    -- BOTÃO < (um pouco maior pra borda 3 não esmagar)
     local left = Instance.new("TextButton", nav)
-    left.Size = UDim2.new(0.5,-6,1,-6)
-    left.Position = UDim2.new(0,3,0,3)
+    left.Size = UDim2.new(0.5,-8,1,-8)
+    left.Position = UDim2.new(0,4,0,4)
     left.Text = "<"
     left.TextScaled = true
     left.BackgroundColor3 = win.bg
@@ -48,10 +44,9 @@ function c00lgui.Window(config)
     left.BorderSizePixel = 3
     left.TextColor3 = win.text
 
-    -- BOTÃO >
     local right = Instance.new("TextButton", nav)
-    right.Size = UDim2.new(0.5,-6,1,-6)
-    right.Position = UDim2.new(0.5,3,0,3)
+    right.Size = UDim2.new(0.5,-8,1,-8)
+    right.Position = UDim2.new(0.5,4,0,4)
     right.Text = ">"
     right.TextScaled = true
     right.BackgroundColor3 = win.bg
@@ -59,13 +54,11 @@ function c00lgui.Window(config)
     right.BorderSizePixel = 3
     right.TextColor3 = win.text
 
-    -- CONTAINER DAS PÁGINAS
     local container = Instance.new("Frame", mf)
-    container.Size = UDim2.new(1,0,1,-70)
-    container.Position = UDim2.new(0,0,0,70)
+    container.Size = UDim2.new(1,0,1,-75)
+    container.Position = UDim2.new(0,0,0,75)
     container.BackgroundTransparency = 1
 
-    -- BOTÃO OPEN/CLOSE
     local toggleBtn = Instance.new("TextButton", sg)
     toggleBtn.Size = UDim2.new(0,300,0,20)
     toggleBtn.Position = UDim2.new(0,10,0.3,400)
@@ -76,7 +69,6 @@ function c00lgui.Window(config)
     toggleBtn.TextColor3 = win.text
     toggleBtn.TextScaled = true
 
-    -- SISTEMA DE PAGE
     function win:AddPage()
         local pageframe = Instance.new("Frame", container)
         pageframe.Size = UDim2.new(1,0,1,0)
@@ -88,19 +80,16 @@ function c00lgui.Window(config)
 
         function page:AddSection(name)
             sectionCount += 1
+
             local isLeft = (sectionCount % 2 == 1)
 
-            -- SECTION (borda 3, alinhada)
             local sec = Instance.new("Frame", pageframe)
-            sec.Size = UDim2.new(0.5, -2, 1, 0)
-            sec.Position = isLeft
-                and UDim2.new(0, 0, 0, 0)
-                or  UDim2.new(0.5, 2, 0, 0)
+            sec.Size = UDim2.new(0.5,-2,1,0)
+            sec.Position = isLeft and UDim2.new(0,0,0,0) or UDim2.new(0.5,2,0,0)
             sec.BackgroundColor3 = win.bg
             sec.BorderColor3 = win.accent
             sec.BorderSizePixel = 3
 
-            -- TÍTULO DA SECTION (sem borda pra não duplicar)
             local tit = Instance.new("TextLabel", sec)
             tit.Size = UDim2.new(1,0,0,25)
             tit.Text = name
@@ -109,7 +98,6 @@ function c00lgui.Window(config)
             tit.BorderSizePixel = 0
             tit.TextSize = 12
 
-            -- ÁREA INTERNA DA SECTION
             local content = Instance.new("Frame", sec)
             content.Size = UDim2.new(1,0,1,-25)
             content.Position = UDim2.new(0,0,0,25)
@@ -118,7 +106,6 @@ function c00lgui.Window(config)
             local grid = Instance.new("UIGridLayout", content)
             grid.CellSize = UDim2.new(0.48,0,0,30)
             grid.CellPadding = UDim2.new(0,4,0,4)
-            grid.SortOrder = Enum.SortOrder.LayoutOrder
 
             local section = {}
 
@@ -132,15 +119,12 @@ function c00lgui.Window(config)
                 btn.TextSize = 9
                 btn.TextWrapped = true
                 btn.Parent = content
-                if cb then
-                    btn.MouseButton1Click:Connect(cb)
-                end
+                if cb then btn.MouseButton1Click:Connect(cb) end
             end
 
             return section
         end
 
-        -- NAVEGAÇÃO
         left.MouseButton1Click:Connect(function()
             if win.current > 1 then
                 win.pages[win.current].frame.Visible = false
@@ -157,7 +141,6 @@ function c00lgui.Window(config)
             end
         end)
 
-        -- BOTÃO OPEN/CLOSE
         toggleBtn.MouseButton1Click:Connect(function()
             mf.Visible = not mf.Visible
             toggleBtn.Text = mf.Visible and "Close" or "Open"
