@@ -120,6 +120,7 @@ function Window:_createGui()
 	self.pagesContainer.BorderSizePixel = 3
 	self.pagesContainer.Position = UDim2.new(0, 0, 0, 80)
 	self.pagesContainer.Size = UDim2.new(1, 0, 1, -80)
+	self.pagesContainer.ClipsDescendants = false
 	self.pagesContainer.Parent = self.mainFrame
 	
 	-- Close/Open Button (FORA da GUI, embaixo) - MUDE A POSIÇÃO AQUI
@@ -227,6 +228,7 @@ function Page:AddSection(name, config)
 	sectionFrame.BorderSizePixel = config.BorderSize or 3
 	sectionFrame.Position = UDim2.new((sectionIndex == 1 and 0 or 0.5), (sectionIndex == 1 and 0 or 3), 0, 0)
 	sectionFrame.Size = UDim2.new(0.5, (sectionIndex == 1 and -3 or -3), 1, 0)
+	sectionFrame.ClipsDescendants = false
 	sectionFrame.Parent = self.frame
 	
 	local titleLabel = Instance.new("TextLabel")
