@@ -1,261 +1,163 @@
---[[
-c00lgui Library v2 - VERSÃO FINAL CORRIGIDA (AddSection 100% funcionando)
-Visual old school, tabs com < >, sections em colunas duplas
-]]
-
+-- c00lui.lua - VERSÃO IDIOTA E INFALÍVEL (sem metatable zuado)
 local c00lgui = {}
 
-local Window = {}
-Window.__index = Window
-
 function c00lgui.Window(config)
-    local self = setmetatable({}, Window)
     config = config or {}
-    self.title = config.Title or "c00lgui"
-    self.position = config.Position or UDim2.new(0, 3, 0.3, 0)
-    self.width = config.Width or 300
-    self.height = config.Height or 400
-    self.bgColor = config.BackgroundColor or Color3.fromRGB(0, 0, 0)
-    self.accentColor = config.AccentColor or Color3.fromRGB(255, 0, 0)
-    self.textColor = config.TextColor or Color3.fromRGB(255, 255, 255)
-    self.pages = {}
-    self.currentPage = 1
-    self.visible = true
-    self:_createGui()
-    return self
-end
+    local win = {
+        pages = {},
+        currentPage = 1,
+        accent = config.AccentColor or Color3.fromRGB(255,0,0),
+        bg = Color3.fromRGB(0,0,0),
+        text = Color3.fromRGB(255,255,255)
+    }
 
-function Window:_createGui()
-    local coreGui = game:GetService("CoreGui")
-    self.screenGui = Instance.new("ScreenGui")
-    self.screenGui.Name = "c00lGuiWindow"
-    self.screenGui.ResetOnSpawn = false
-    self.screenGui.Parent = coreGui
+    -- cria a gui (mesmo código de sempre, só simplificado)
+    local sg = Instance.new("ScreenGui", game.CoreGui)
+    sg.ResetOnSpawn = false
+    local mf = Instance.new("Frame", sg)
+    mf.Size = UDim2.new(0,300,0,400)
+    mf.Position = UDim2.new(0,10,0.3,0)
+    mf.BackgroundColor3 = win.bg
+    mf.BorderColor3 = win.accent
+    mf.BorderSizePixel = 3
 
-    self.mainFrame = Instance.new("Frame")
-    self.mainFrame.BackgroundColor3 = self.bgColor
-    self.mainFrame.BorderColor3 = self.accentColor
-    self.mainFrame.BorderSizePixel = 3
-    self.mainFrame.Position = self.position
-    self.mainFrame.Size = UDim2.new(0, self.width, 0, self.height)
-    self.mainFrame.Parent = self.screenGui
-
-    local titleLabel = Instance.new("TextLabel")
-    titleLabel.BackgroundColor3 = self.bgColor
-    titleLabel.BorderColor3 = self.accentColor
-    titleLabel.BorderSizePixel = 3
-    titleLabel.Size = UDim2.new(1, 0, 0, 40)
-    titleLabel.Text = self.title
-    titleLabel.TextColor3 = self.textColor
-    titleLabel.TextScaled = true
-    titleLabel.Parent = self.mainFrame
-
-    self.tabsContainer = Instance.new("Frame")
-    self.tabsContainer.BackgroundColor3 = self.bgColor
-    self.tabsContainer.BorderColor3 = self.accentColor
-    self.tabsContainer.BorderSizePixel = 3
-    self.tabsContainer.Position = UDim2.new(0, 0, 0, 40)
-    self.tabsContainer.Size = UDim2.new(1, 0, 0, 40)
-    self.tabsContainer.Parent = self.mainFrame
-
-    local leftBtn = Instance.new("TextButton")
-    leftBtn.BackgroundColor3 = self.bgColor
-    leftBtn.BorderColor3 = self.accentColor
-    leftBtn.BorderSizePixel = 3
-    leftBtn.Size = UDim2.new(0.5, -2, 1, 0)
-    leftBtn.Text = "<"
-    leftBtn.TextColor3 = self.textColor
-    leftBtn.TextScaled = true
-    leftBtn.Parent = self.tabsContainer
-    leftBtn.MouseButton1Down:Connect(function() self:PreviousPage() end)
-
-    local rightBtn = Instance.new("TextButton")
-    rightBtn.BackgroundColor3 = self.bgColor
-    rightBtn.BorderColor3 = self.accentColor
-    rightBtn.BorderSizePixel = 3
-    rightBtn.Position = UDim2.new(0.5, 2, 0, 0)
-    rightBtn.Size = UDim2.new(0.5, -2, 1, 0)
-    rightBtn.Text = ">"
-    rightBtn.TextColor3 = self.textColor
-    rightBtn.TextScaled = true
-    rightBtn.Parent = self.tabsContainer
-    rightBtn.MouseButton1Down:Connect(function() self:NextPage() end)
-
-    self.pagesContainer = Instance.new("Frame")
-    self.pagesContainer.BackgroundColor3 = self.bgColor
-    self.pagesContainer.BorderColor3 = self.accentColor
-    self.pagesContainer.BorderSizePixel = 3
-    self.pagesContainer.Position = UDim2.new(0, 0, 0, 80)
-    self.pagesContainer.Size = UDim2.new(1, 0, 1, -80)
-    self.pagesContainer.Parent = self.mainFrame
-
-    self.toggleButton = Instance.new("TextButton")
-    self.toggleButton.BackgroundColor3 = self.bgColor
-    self.toggleButton.BorderColor3 = self.accentColor
-    self.toggleButton.BorderSizePixel = 3
-    self.toggleButton.Position = UDim2.new(0, 3, 0.3, self.height)
-    self.toggleButton.Size = UDim2.new(0, self.width, 0, 20)
-    self.toggleButton.Text = "Close"
-    self.toggleButton.TextColor3 = self.textColor
-    self.toggleButton.Parent = self.screenGui
-    self.toggleButton.MouseButton1Down:Connect(function() self:Toggle() end)
-end
-
-function Window:AddPage(name)
-    local pageFrame = Instance.new("Frame")
-    pageFrame.BackgroundColor3 = self.bgColor
-    pageFrame.BorderSizePixel = 0
-    pageFrame.Size = UDim2.new(1, 0, 1, 0)
-    pageFrame.Visible = (#self.pages + 1 == 1)
-    pageFrame.Parent = self.pagesContainer
-
-    local page = { frame = pageFrame, sections = {}, window = self }
-    setmetatable(page, Page)  -- Aqui é o pulo do gato: metatable direto com Page que tem __index = Page
-    table.insert(self.pages, page)
-    return page
-end
-
-function Window:NextPage()
-    if self.currentPage < #self.pages then
-        self.pages[self.currentPage].frame.Visible = false
-        self.currentPage = self.currentPage + 1
-        self.pages[self.currentPage].frame.Visible = true
-    end
-end
-
-function Window:PreviousPage()
-    if self.currentPage > 1 then
-        self.pages[self.currentPage].frame.Visible = false
-        self.currentPage = self.currentPage - 1
-        self.pages[self.currentPage].frame.Visible = true
-    end
-end
-
-function Window:Toggle()
-    self.visible = not self.visible
-    self.mainFrame.Visible = self.visible
-    self.toggleButton.Text = self.visible and "Close" or "Open"
-end
-
--- Page metatable
-local Page = {}
-Page.__index = Page
-
-function Page:AddSection(name)
-    local idx = #self.sections + 1
-    local secFrame = Instance.new("Frame")
-    secFrame.BackgroundColor3 = self.window.bgColor
-    secFrame.BorderColor3 = self.window.accentColor
-    secFrame.BorderSizePixel = 3
-    secFrame.Position = UDim2.new(idx == 1 and 0 or 0.5, idx == 1 and 0 or 3, 0, 0)
-    secFrame.Size = UDim2.new(0.5, -6, 1, 0)
-    secFrame.Parent = self.frame
-
-    local title = Instance.new("TextLabel")
-    title.BackgroundColor3 = self.window.bgColor
-    title.BorderColor3 = self.window.accentColor
+    local title = Instance.new("TextLabel", mf)
+    title.Size = UDim2.new(1,0,0,40)
+    title.BackgroundColor3 = win.bg
+    title.BorderColor3 = win.accent
     title.BorderSizePixel = 3
-    title.Size = UDim2.new(1, 0, 0, 30)
-    title.Text = name
-    title.TextColor3 = self.window.textColor
+    title.Text = config.Title or "Super Natural"
+    title.TextColor3 = win.text
     title.TextScaled = true
-    title.Parent = secFrame
 
-    local section = { frame = secFrame, elementCount = 0, window = self.window }
-    setmetatable(section, Section)
-    table.insert(self.sections, section)
-    return section
-end
+    -- navegação < > (mesmo de sempre)
+    local nav = Instance.new("Frame", mf)
+    nav.Size = UDim2.new(1,0,0,40)
+    nav.Position = UDim2.new(0,0,0,40)
+    nav.BackgroundColor3 = win.bg
+    nav.BorderColor3 = win.accent
+    nav.BorderSizePixel = 3
 
--- Section metatable
-local Section = {}
-Section.__index = Section
-
-function Section:AddButton(name, config)
-    config = config or {}
-    local y = 30 + self.elementCount * 35
-    local btn = Instance.new("TextButton")
-    btn.BackgroundColor3 = self.window.bgColor
-    btn.BorderColor3 = self.window.accentColor
-    btn.BorderSizePixel = 3
-    btn.Position = UDim2.new(0, 3, 0, y)
-    btn.Size = UDim2.new(1, -6, 0, 30)
-    btn.Text = name
-    btn.TextColor3 = self.window.textColor
-    btn.TextScaled = true
-    btn.Parent = self.frame
-    if config.OnClick then btn.MouseButton1Down:Connect(config.OnClick) end
-    self.elementCount = self.elementCount + 1
-    return btn
-end
-
-function Section:AddToggle(name, config)
-    config = config or {}
-    local y = 30 + self.elementCount * 35
-    local frame = Instance.new("Frame")
-    frame.BackgroundTransparency = 1
-    frame.Size = UDim2.new(1, -6, 0, 30)
-    frame.Position = UDim2.new(0, 3, 0, y)
-    frame.Parent = self.frame
-
-    local label = Instance.new("TextLabel")
-    label.BackgroundTransparency = 1
-    label.Size = UDim2.new(0.75, 0, 1, 0)
-    label.Text = name
-    label.TextColor3 = self.window.textColor
-    label.TextXAlignment = Enum.TextXAlignment.Left
-    label.Parent = frame
-
-    local check = Instance.new("TextButton")
-    check.BackgroundColor3 = (config.Default and self.window.accentColor or self.window.bgColor)
-    check.BorderColor3 = self.window.accentColor
-    check.BorderSizePixel = 2
-    check.Size = UDim2.new(0.2, 0, 0.8, 0)
-    check.Position = UDim2.new(0.8, 0, 0.1, 0)
-    check.Text = (config.Default and "ON" or "OFF")
-    check.TextColor3 = self.window.textColor
-    check.Parent = frame
-
-    local state = config.Default or false
-    check.MouseButton1Down:Connect(function()
-        state = not state
-        check.BackgroundColor3 = state and self.window.accentColor or self.window.bgColor
-        check.Text = state and "ON" or "OFF"
-        if config.OnChange then config.OnChange(state) end
+    local left = Instance.new("TextButton", nav)
+    left.Size = UDim2.new(0.5,0,1,0)
+    left.Text = "<"
+    left.TextScaled = true
+    left.BackgroundColor3 = win.bg
+    left.TextColor3 = win.text
+    left.MouseButton1Click:Connect(function()
+        if win.currentPage > 1 then
+            win.pages[win.currentPage].frame.Visible = false
+            win.currentPage = win.currentPage - 1
+            win.pages[win.currentPage].frame.Visible = true
+        end
     end)
 
-    self.elementCount = self.elementCount + 1
-    return {getValue = function() return state end}
-end
+    local right = Instance.new("TextButton", nav)
+    right.Size = UDim2.new(0.5,0,1,0)
+    right.Position = UDim2.new(0.5,0,0,0)
+    right.Text = ">"
+    right.TextScaled = true
+    right.BackgroundColor3 = win.bg
+    right.TextColor3 = win.text
+    right.MouseButton1Click:Connect(function()
+        if win.currentPage < #win.pages then
+            win.pages[win.currentPage].frame.Visible = false
+            win.currentPage = win.currentPage + 1
+            win.pages[win.currentPage].frame.Visible = true
+        end
+    end)
 
-function Section:AddTextInput(placeholder, config)
-    config = config or {}
-    local y = 30 + self.elementCount * 35
-    local frame = Instance.new("Frame")
-    frame.BackgroundColor3 = self.window.bgColor
-    frame.BorderColor3 = self.window.accentColor
-    frame.BorderSizePixel = 3
-    frame.Position = UDim2.new(0, 3, 0, y)
-    frame.Size = UDim2.new(1, -6, 0, 30)
-    frame.Parent = self.frame
+    local container = Instance.new("Frame", mf)
+    container.Size = UDim2.new(1,0,1,-80)
+    container.Position = UDim2.new(0,0,0,80)
+    container.BackgroundTransparency = 1
 
-    local box = Instance.new("TextBox")
-    box.BackgroundColor3 = self.window.bgColor
-    box.BorderColor3 = self.window.accentColor
-    box.BorderSizePixel = 1
-    box.Position = UDim2.new(0, 3, 0.1, 0)
-    box.Size = UDim2.new(1, -6, 0.8, 0)
-    box.PlaceholderText = placeholder
-    box.Text = config.DefaultText or ""
-    box.TextColor3 = self.window.textColor
-    box.Parent = frame
+    -- FUNÇÃO ADD PAGE (aqui que tava o problema)
+    function win:AddPage(name)
+        local pageframe = Instance.new("Frame", container)
+        pageframe.Size = UDim2.new(1,0,1,0)
+        pageframe.BackgroundTransparency = 1
+        pageframe.Visible = (#win.pages == 0)
 
-    if config.OnChange then
-        box:GetPropertyChangedSignal("Text"):Connect(function() config.OnChange(box.Text) end)
+        local page = {
+            frame = pageframe,
+            AddSection = function(self, secname)
+                local coluna = #pageframe:GetChildren() % 2 == 1 and 0 or 0.5
+                local sec = Instance.new("Frame", pageframe)
+                sec.Size = UDim2.new(0.5,-6,1,0)
+                sec.Position = UDim2.new(coluna, coluna == 0 and 0 or 3,0,0)
+                sec.BackgroundColor3 = win.bg
+                sec.BorderColor3 = win.accent
+                sec.BorderSizePixel = 3
+
+                local sectitle = Instance.new("TextLabel", sec)
+                sectitle.Size = UDim2.new(1,0,0,30)
+                sectitle.Text = secname
+                sectitle.TextColor3 = win.text
+                sectitle.BackgroundColor3 = win.bg
+                sectitle.BorderColor3 = win.accent
+                sectitle.BorderSizePixel = 3
+                sectitle.TextScaled = true
+
+                local y = 30
+                local section = {}
+
+                function section:AddButton(txt, cb)
+                    y = y + 35
+                    local btn = Instance.new("TextButton", sec)
+                    btn.Size = UDim2.new(1,-6,0,30)
+                    btn.Position = UDim2.new(0,3,0,y)
+                    btn.Text = txt
+                    btn.BackgroundColor3 = win.bg
+                    btn.BorderColor3 = win.accent
+                    btn.BorderSizePixel = 3
+                    btn.TextColor3 = win.text
+                    btn.TextScaled = true
+                    if cb then btn.MouseButton1Click:Connect(cb) end
+                end
+
+                function section:AddToggle(txt, default, cb)
+                    y = y + 35
+                    local state = default or false
+                    local frame = Instance.new("Frame", sec)
+                    frame.Size = UDim2.new(1,-6,0,30)
+                    frame.Position = UDim2.new(0,3,0,y)
+                    frame.BackgroundTransparency = 1
+
+                    local label = Instance.new("TextLabel", frame)
+                    label.Size = UDim2.new(0.75,0,1,0)
+                    label.Text = txt
+                    label.TextColor3 = win.text
+                    label.BackgroundTransparency = 1
+                    label.TextXAlignment = Enum.TextXAlignment.Left
+
+                    local toggle = Instance.new("TextButton", frame)
+                    toggle.Size = UDim2.new(0.2,0,0.8,0)
+                    toggle.Position = UDim2.new(0.8,0,0.1,0)
+                    toggle.Text = state and "ON" or "OFF"
+                    toggle.BackgroundColor3 = state and win.accent or win.bg
+                    toggle.TextColor3 = win.text
+                    toggle.MouseButton1Click:Connect(function()
+                        state = not state
+                        toggle.Text = state and "ON" or "OFF"
+                        toggle.BackgroundColor3 = state and win.accent or win.bg
+                        if cb then cb(state) end
+                    end)
+                end
+
+                return section
+            end
+        }
+
+        table.insert(win.pages, {frame = pageframe})
+        return page
     end
 
-    self.elementCount = self.elementCount + 1
-    return {getText = function() return box.Text end, setText = function(t) box.Text = t end}
+    function win:Toggle()
+        mf.Visible = not mf.Visible
+    end
+
+    return win
 end
 
 return c00lgui
