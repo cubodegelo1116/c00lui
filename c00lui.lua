@@ -76,30 +76,19 @@ function Window:_createGui()
 	titleLabel.Parent = self.mainFrame
 	self.titleLabel = titleLabel
 	
-	-- Tabs Container
-	self.tabsContainer = Instance.new("Frame")
-	self.tabsContainer.Name = "TabsContainer"
-	self.tabsContainer.BackgroundColor3 = self.bgColor
-	self.tabsContainer.BorderColor3 = self.accentColor
-	self.tabsContainer.BorderSizePixel = 3
-	self.tabsContainer.Position = UDim2.new(0, 0, 0, 40)
-	self.tabsContainer.Size = UDim2.new(1, 0, 0, 40)
-	self.tabsContainer.ClipsDescendants = false
-	self.tabsContainer.Parent = self.mainFrame
-	
 	-- Left Button (<)
 	local leftButton = Instance.new("TextButton")
 	leftButton.Name = "<"
 	leftButton.BackgroundColor3 = self.bgColor
 	leftButton.BorderColor3 = self.accentColor
 	leftButton.BorderSizePixel = 3
-	leftButton.Position = UDim2.new(0, 0, 0, 0)
-	leftButton.Size = UDim2.new(0.5, -2, 1, 0)
+	leftButton.Position = UDim2.new(0, 0, 0, 40)
+	leftButton.Size = UDim2.new(0.5, -2, 0, 40)
 	leftButton.Font = Enum.Font.SourceSans
 	leftButton.FontSize = Enum.FontSize.Size48
 	leftButton.Text = "<"
 	leftButton.TextColor3 = self.textColor
-	leftButton.Parent = self.tabsContainer
+	leftButton.Parent = self.mainFrame
 	leftButton.MouseButton1Down:Connect(function()
 		self:PreviousPage()
 	end)
@@ -111,13 +100,13 @@ function Window:_createGui()
 	rightButton.BackgroundColor3 = self.bgColor
 	rightButton.BorderColor3 = self.accentColor
 	rightButton.BorderSizePixel = 3
-	rightButton.Position = UDim2.new(0.5, 2, 0, 0)
-	rightButton.Size = UDim2.new(0.5, -2, 1, 0)
+	rightButton.Position = UDim2.new(0.5, 2, 0, 40)
+	rightButton.Size = UDim2.new(0.5, -2, 0, 40)
 	rightButton.Font = Enum.Font.SourceSans
 	rightButton.FontSize = Enum.FontSize.Size48
 	rightButton.Text = ">"
 	rightButton.TextColor3 = self.textColor
-	rightButton.Parent = self.tabsContainer
+	rightButton.Parent = self.mainFrame
 	rightButton.MouseButton1Down:Connect(function()
 		self:NextPage()
 	end)
