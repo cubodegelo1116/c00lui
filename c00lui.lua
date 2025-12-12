@@ -27,7 +27,7 @@ function c00lgui.Window(config)
     title.BorderColor3 = win.accent
     title.BorderSizePixel = 3
     title.TextColor3 = win.text
-    title.TextSize = 18
+    title.TextSize = 15        -- ← AQUI MUDA O TAMANHO DO TÍTULO DA GUI
 
     local nav = Instance.new("Frame", mf)
     nav.Size = UDim2.new(1,0,0,40)
@@ -46,13 +46,6 @@ function c00lgui.Window(config)
     left.BorderColor3 = win.accent
     left.BorderSizePixel = 3
     left.TextColor3 = win.text
-    left.MouseButton1Click:Connect(function()
-        if win.current > 1 then
-            win.pages[win.current].frame.Visible = false
-            win.current = win.current - 1
-            win.pages[win.current].frame.Visible = true
-        end
-    end)
 
     local right = Instance.new("TextButton", nav)
     right.Size = UDim2.new(0.5,-6,1,-6)
@@ -63,13 +56,6 @@ function c00lgui.Window(config)
     right.BorderColor3 = win.accent
     right.BorderSizePixel = 3
     right.TextColor3 = win.text
-    right.MouseButton1Click:Connect(function()
-        if win.current < #win.pages then
-            win.pages[win.current].frame.Visible = false
-            win.current = win.current + 1
-            win.pages[win.current].frame.Visible = true
-        end
-    end)
 
     local container = Instance.new("Frame", mf)
     container.Size = UDim2.new(1,0,1,-70)
@@ -85,10 +71,6 @@ function c00lgui.Window(config)
     toggleBtn.Text = "Close"
     toggleBtn.TextColor3 = win.text
     toggleBtn.TextScaled = true
-    toggleBtn.MouseButton1Click:Connect(function()
-        mf.Visible = not mf.Visible
-        toggleBtn.Text = mf.Visible and "Close" or "Open"
-    end)
 
     function win:AddPage()
         local pageframe = Instance.new("Frame", container)
@@ -116,7 +98,7 @@ function c00lgui.Window(config)
             tit.BackgroundColor3 = win.bg
             tit.BorderColor3 = win.accent
             tit.BorderSizePixel = 3
-            tit.TextSize = 16
+            tit.TextSize = 12        -- ← AQUI MUDA O TAMANHO DO TÍTULO DA SECTION
 
             local content = Instance.new("Frame", sec)
             content.Size = UDim2.new(1,0,1,-25)
@@ -137,15 +119,37 @@ function c00lgui.Window(config)
                 btn.BorderColor3 = win.accent
                 btn.BorderSizePixel = 3
                 btn.TextColor3 = win.text
-                btn.TextSize = 12
-                btn.TextWrapped = true
+                btn.TextSize = 9                    -- ← AQUI MUDA O TAMANHO DO TEXTO DOS BOTÕES
+                btn.TextWrapped = true               -- ← ISSO FAZ O TEXTO NUNCA VAZAR
                 btn.TextXAlignment = Enum.TextXAlignment.Center
+                btn.TextYAlignment = Enum.TextYAlignment.Center
                 btn.Parent = content
                 if cb then btn.MouseButton1Click:Connect(cb) end
             end
 
             return section
         end
+
+        left.MouseButton1Click:Connect(function()
+            if win.current > 1 then
+                win.pages[win.current].frame.Visible = false
+                win.current = win.current - 1
+                win.pages[win.current].frame.Visible = true
+            end
+        end)
+
+        right.MouseButton1Click:Connect(function()
+            if win.current < #win.pages then
+                win.pages[win.current].frame.Visible = false
+                win.current = win.current + 1
+                win.pages[win.current].frame.Visible = true
+            end
+        end)
+
+        toggleBtn.MouseButton1Click:Connect(function()
+            mf.Visible = not mf.Visible
+            toggleBtn.Text = mf.Visible and "Close" or "Open"
+        end)
 
         table.insert(win.pages, {frame = pageframe})
         return page
