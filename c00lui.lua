@@ -23,10 +23,9 @@ function Window.new(config)
 	
 	-- Default Configuration
 	self.title = config.Title or "c00lgui"
-	self.subtitle = config.Subtitle or ""
 	self.position = config.Position or UDim2.new(0, 3, 0.3, 0)
-	self.size = config.Size or UDim2.new(0, 300, 0, 400)
-	self.windowSize = {Width = 300, Height = 400}
+	self.width = config.Width or 300
+	self.height = config.Height or 400
 	
 	-- Colors
 	self.bgColor = config.BackgroundColor or Color3.fromRGB(0, 0, 0)
@@ -50,14 +49,14 @@ function Window:_createGui()
 	self.screenGui.ResetOnSpawn = false
 	self.screenGui.Parent = coreGui
 	
-	-- Main Frame
+	-- Main Frame (a GUI em si)
 	self.mainFrame = Instance.new("Frame")
 	self.mainFrame.Name = "MainFrame"
 	self.mainFrame.BackgroundColor3 = self.bgColor
 	self.mainFrame.BorderColor3 = self.accentColor
 	self.mainFrame.BorderSizePixel = 3
 	self.mainFrame.Position = self.position
-	self.mainFrame.Size = self.size
+	self.mainFrame.Size = UDim2.new(0, self.width, 0, self.height)
 	self.mainFrame.Parent = self.screenGui
 	
 	-- Title Bar
@@ -77,60 +76,14 @@ function Window:_createGui()
 	titleLabel.Parent = self.mainFrame
 	self.titleLabel = titleLabel
 	
-	-- Subtitle
-	local subtitleLabel = Instance.new("TextLabel")
-	subtitleLabel.Name = "Subtitle"
-	subtitleLabel.BackgroundColor3 = self.bgColor
-	subtitleLabel.BorderColor3 = self.bgColor
-	subtitleLabel.BorderSizePixel = 0
-	subtitleLabel.Position = UDim2.new(0, 5, 0, 5)
-	subtitleLabel.Size = UDim2.new(0.5, -10, 0, 30)
-	subtitleLabel.Font = Enum.Font.SourceSans
-	subtitleLabel.FontSize = Enum.FontSize.Size18
-	subtitleLabel.Text = self.subtitle
-	subtitleLabel.TextColor3 = self.textColor
-	subtitleLabel.TextXAlignment = Enum.TextXAlignment.Left
-	subtitleLabel.Parent = titleLabel
-	self.subtitleLabel = subtitleLabel
-	
-	-- Pages Container
-	self.pagesContainer = Instance.new("Frame")
-	self.pagesContainer.Name = "Pages"
-	self.pagesContainer.BackgroundColor3 = self.bgColor
-	self.pagesContainer.BorderColor3 = self.accentColor
-	self.pagesContainer.BorderSizePixel = 3
-	self.pagesContainer.Position = UDim2.new(0, 0, 0.1, 0)
-	self.pagesContainer.Size = UDim2.new(1, 0, 0.9, 0)
-	self.pagesContainer.Parent = self.mainFrame
-	
-	-- Close/Open Button (MUDE AQUI: UDim2.new(0, 3, 0.3, 400))
-	self.toggleButton = Instance.new("TextButton")
-	self.toggleButton.Name = "Close/Open"
-	self.toggleButton.Active = true
-	self.toggleButton.AutoButtonColor = true
-	self.toggleButton.BackgroundColor3 = self.bgColor
-	self.toggleButton.BorderColor3 = self.accentColor
-	self.toggleButton.BorderSizePixel = 3
-	self.toggleButton.Position = UDim2.new(0, 3, 0.3, 400) -- MUDE AQUI A POSIÇÃO
-	self.toggleButton.Size = UDim2.new(0, 300, 0, 20) -- E AQUI O TAMANHO
-	self.toggleButton.Font = Enum.Font.SourceSans
-	self.toggleButton.FontSize = Enum.FontSize.Size18
-	self.toggleButton.Text = "Close"
-	self.toggleButton.TextColor3 = self.textColor
-	self.toggleButton.TextXAlignment = Enum.TextXAlignment.Center
-	self.toggleButton.Parent = self.screenGui
-	self.toggleButton.MouseButton1Down:Connect(function()
-		self:Toggle()
-	end)
-	
-	-- Navigation Buttons
+	-- Left Button (<)
 	local leftButton = Instance.new("TextButton")
 	leftButton.Name = "<"
 	leftButton.BackgroundColor3 = self.bgColor
 	leftButton.BorderColor3 = self.accentColor
 	leftButton.BorderSizePixel = 3
 	leftButton.Position = UDim2.new(0, 0, 0, 40)
-	leftButton.Size = UDim2.new(0.5, -3, 0, 40)
+	leftButton.Size = UDim2.new(0.5, -2, 0, 40)
 	leftButton.Font = Enum.Font.SourceSans
 	leftButton.FontSize = Enum.FontSize.Size48
 	leftButton.Text = "<"
@@ -141,13 +94,14 @@ function Window:_createGui()
 	end)
 	self.leftButton = leftButton
 	
+	-- Right Button (>)
 	local rightButton = Instance.new("TextButton")
 	rightButton.Name = ">"
 	rightButton.BackgroundColor3 = self.bgColor
 	rightButton.BorderColor3 = self.accentColor
 	rightButton.BorderSizePixel = 3
-	rightButton.Position = UDim2.new(0.5, 3, 0, 40)
-	rightButton.Size = UDim2.new(0.5, -3, 0, 40)
+	rightButton.Position = UDim2.new(0.5, 2, 0, 40)
+	rightButton.Size = UDim2.new(0.5, -2, 0, 40)
 	rightButton.Font = Enum.Font.SourceSans
 	rightButton.FontSize = Enum.FontSize.Size48
 	rightButton.Text = ">"
@@ -157,6 +111,36 @@ function Window:_createGui()
 		self:NextPage()
 	end)
 	self.rightButton = rightButton
+	
+	-- Pages Container
+	self.pagesContainer = Instance.new("Frame")
+	self.pagesContainer.Name = "Pages"
+	self.pagesContainer.BackgroundColor3 = self.bgColor
+	self.pagesContainer.BorderColor3 = self.accentColor
+	self.pagesContainer.BorderSizePixel = 3
+	self.pagesContainer.Position = UDim2.new(0, 0, 0, 80)
+	self.pagesContainer.Size = UDim2.new(1, 0, 1, -80)
+	self.pagesContainer.Parent = self.mainFrame
+	
+	-- Close/Open Button (FORA da GUI, embaixo) - MUDE A POSIÇÃO AQUI
+	self.toggleButton = Instance.new("TextButton")
+	self.toggleButton.Name = "Close/Open"
+	self.toggleButton.Active = true
+	self.toggleButton.AutoButtonColor = true
+	self.toggleButton.BackgroundColor3 = self.bgColor
+	self.toggleButton.BorderColor3 = self.accentColor
+	self.toggleButton.BorderSizePixel = 3
+	self.toggleButton.Position = UDim2.new(0, 3, 0.3, 400) -- MUDE AQUI
+	self.toggleButton.Size = UDim2.new(0, self.width, 0, 20)
+	self.toggleButton.Font = Enum.Font.SourceSans
+	self.toggleButton.FontSize = Enum.FontSize.Size18
+	self.toggleButton.Text = "Close"
+	self.toggleButton.TextColor3 = self.textColor
+	self.toggleButton.TextXAlignment = Enum.TextXAlignment.Center
+	self.toggleButton.Parent = self.screenGui
+	self.toggleButton.MouseButton1Down:Connect(function()
+		self:Toggle()
+	end)
 end
 
 function Window:AddPage(name)
@@ -167,8 +151,8 @@ function Window:AddPage(name)
 	pageFrame.BackgroundColor3 = self.bgColor
 	pageFrame.BorderColor3 = self.accentColor
 	pageFrame.BorderSizePixel = 3
-	pageFrame.Position = UDim2.new(0, 0, 0, 83)
-	pageFrame.Size = UDim2.new(1, 0, 1, -106)
+	pageFrame.Position = UDim2.new(0, 0, 0, 0)
+	pageFrame.Size = UDim2.new(1, 0, 1, 0)
 	pageFrame.Visible = (pageIndex == 1)
 	pageFrame.Parent = self.pagesContainer
 	
@@ -221,11 +205,6 @@ end
 function Window:SetTitle(title)
 	self.titleLabel.Text = title
 	self.title = title
-end
-
-function Window:SetSubtitle(subtitle)
-	self.subtitleLabel.Text = subtitle
-	self.subtitle = subtitle
 end
 
 function Window:Destroy()
