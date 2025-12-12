@@ -18,43 +18,40 @@ function c00lgui.Window(config)
     mf.Position = UDim2.new(0,10,0.3,0)
     mf.BackgroundColor3 = win.bg
     mf.BorderColor3 = win.accent
-    mf.BorderSizePixel = 3
+    mf.BorderSizePixel = 2   -- borda mais fina e perfeita
 
     local title = Instance.new("TextLabel", mf)
     title.Size = UDim2.new(1,0,0,30)
     title.Text = win.title
     title.BackgroundColor3 = win.bg
-    title.BorderColor3 = win.accent
-    title.BorderSizePixel = 3
+    title.BorderSizePixel = 0   -- NÃO TEM BORDAR PRA NÃO DUPLICAR COM A DO FRAME
     title.TextColor3 = win.text
-    title.TextSize = 15        -- ← AQUI MUDA O TAMANHO DO TÍTULO DA GUI
+    title.TextSize = 15
 
     local nav = Instance.new("Frame", mf)
     nav.Size = UDim2.new(1,0,0,40)
     nav.Position = UDim2.new(0,0,0,30)
     nav.BackgroundColor3 = win.bg
-    nav.BorderColor3 = win.accent
-    nav.BorderSizePixel = 3
-    nav.ClipsDescendants = false
+    nav.BorderSizePixel = 0   -- sem borda (usa apenas a borda do mf)
 
     local left = Instance.new("TextButton", nav)
-    left.Size = UDim2.new(0.5,-6,1,-6)
-    left.Position = UDim2.new(0,3,0,3)
+    left.Size = UDim2.new(0.5,-4,1,-6)
+    left.Position = UDim2.new(0,2,0,3)
     left.Text = "<"
     left.TextScaled = true
     left.BackgroundColor3 = win.bg
     left.BorderColor3 = win.accent
-    left.BorderSizePixel = 3
+    left.BorderSizePixel = 2
     left.TextColor3 = win.text
 
     local right = Instance.new("TextButton", nav)
-    right.Size = UDim2.new(0.5,-6,1,-6)
-    right.Position = UDim2.new(0.5,3,0,3)
+    right.Size = UDim2.new(0.5,-4,1,-6)
+    right.Position = UDim2.new(0.5,2,0,3)
     right.Text = ">"
     right.TextScaled = true
     right.BackgroundColor3 = win.bg
     right.BorderColor3 = win.accent
-    right.BorderSizePixel = 3
+    right.BorderSizePixel = 2
     right.TextColor3 = win.text
 
     local container = Instance.new("Frame", mf)
@@ -67,7 +64,7 @@ function c00lgui.Window(config)
     toggleBtn.Position = UDim2.new(0,10,0.3,400)
     toggleBtn.BackgroundColor3 = win.bg
     toggleBtn.BorderColor3 = win.accent
-    toggleBtn.BorderSizePixel = 3
+    toggleBtn.BorderSizePixel = 2
     toggleBtn.Text = "Close"
     toggleBtn.TextColor3 = win.text
     toggleBtn.TextScaled = true
@@ -84,21 +81,21 @@ function c00lgui.Window(config)
         function page:AddSection(name)
             sectionCount = sectionCount + 1
             local col = (sectionCount % 2 == 1) and 0 or 0.5
+
             local sec = Instance.new("Frame", pageframe)
             sec.Size = UDim2.new(0.5,0,1,0)
             sec.Position = UDim2.new(col,0,0,0)
             sec.BackgroundColor3 = win.bg
             sec.BorderColor3 = win.accent
-            sec.BorderSizePixel = 3
+            sec.BorderSizePixel = 2
 
             local tit = Instance.new("TextLabel", sec)
             tit.Size = UDim2.new(1,0,0,25)
             tit.Text = name
             tit.TextColor3 = win.text
             tit.BackgroundColor3 = win.bg
-            tit.BorderColor3 = win.accent
-            tit.BorderSizePixel = 3
-            tit.TextSize = 12        -- ← AQUI MUDA O TAMANHO DO TÍTULO DA SECTION
+            tit.BorderSizePixel = 0    -- evita duplicar borda superior
+            tit.TextSize = 12
 
             local content = Instance.new("Frame", sec)
             content.Size = UDim2.new(1,0,1,-25)
@@ -106,8 +103,8 @@ function c00lgui.Window(config)
             content.BackgroundTransparency = 1
 
             local grid = Instance.new("UIGridLayout", content)
-            grid.CellSize = UDim2.new(0.48,0,0,30) -- 2 colunas lado a lado
-            grid.CellPadding = UDim2.new(0,4,0,4) -- espaçamento bonitinho
+            grid.CellSize = UDim2.new(0.48,0,0,30)
+            grid.CellPadding = UDim2.new(0,4,0,4)
             grid.SortOrder = Enum.SortOrder.LayoutOrder
 
             local section = {}
@@ -117,14 +114,14 @@ function c00lgui.Window(config)
                 btn.Text = txt
                 btn.BackgroundColor3 = win.bg
                 btn.BorderColor3 = win.accent
-                btn.BorderSizePixel = 3
+                btn.BorderSizePixel = 2
                 btn.TextColor3 = win.text
-                btn.TextSize = 9                    -- ← AQUI MUDA O TAMANHO DO TEXTO DOS BOTÕES
-                btn.TextWrapped = true               -- ← ISSO FAZ O TEXTO NUNCA VAZAR
-                btn.TextXAlignment = Enum.TextXAlignment.Center
-                btn.TextYAlignment = Enum.TextYAlignment.Center
+                btn.TextSize = 9
+                btn.TextWrapped = true
                 btn.Parent = content
-                if cb then btn.MouseButton1Click:Connect(cb) end
+                if cb then
+                    btn.MouseButton1Click:Connect(cb)
+                end
             end
 
             return section
@@ -133,7 +130,7 @@ function c00lgui.Window(config)
         left.MouseButton1Click:Connect(function()
             if win.current > 1 then
                 win.pages[win.current].frame.Visible = false
-                win.current = win.current - 1
+                win.current -= 1
                 win.pages[win.current].frame.Visible = true
             end
         end)
@@ -141,7 +138,7 @@ function c00lgui.Window(config)
         right.MouseButton1Click:Connect(function()
             if win.current < #win.pages then
                 win.pages[win.current].frame.Visible = false
-                win.current = win.current + 1
+                win.current += 1
                 win.pages[win.current].frame.Visible = true
             end
         end)
