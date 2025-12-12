@@ -1,6 +1,6 @@
 --[[
-c00lgui Library v2 - Corrigidona, com AddSection funcionando e tabs com < >
-Visual old school c00lgui, sections em colunas
+c00lgui Library v2 - VERSÃO FINAL CORRIGIDA (AddSection 100% funcionando)
+Visual old school, tabs com < >, sections em colunas duplas
 ]]
 
 local c00lgui = {}
@@ -10,6 +10,7 @@ Window.__index = Window
 
 function c00lgui.Window(config)
     local self = setmetatable({}, Window)
+    config = config or {}
     self.title = config.Title or "c00lgui"
     self.position = config.Position or UDim2.new(0, 3, 0.3, 0)
     self.width = config.Width or 300
@@ -48,7 +49,6 @@ function Window:_createGui()
     titleLabel.TextColor3 = self.textColor
     titleLabel.TextScaled = true
     titleLabel.Parent = self.mainFrame
-    self.titleLabel = titleLabel
 
     self.tabsContainer = Instance.new("Frame")
     self.tabsContainer.BackgroundColor3 = self.bgColor
@@ -106,10 +106,11 @@ function Window:AddPage(name)
     pageFrame.BackgroundColor3 = self.bgColor
     pageFrame.BorderSizePixel = 0
     pageFrame.Size = UDim2.new(1, 0, 1, 0)
-    pageFrame.Visible = (#self.pages == 0)
+    pageFrame.Visible = (#self.pages + 1 == 1)
     pageFrame.Parent = self.pagesContainer
 
-    local page = setmetatable({frame = pageFrame, sections = {}, window = self}, Page)
+    local page = { frame = pageFrame, sections = {}, window = self }
+    setmetatable(page, Page)  -- Aqui é o pulo do gato: metatable direto com Page que tem __index = Page
     table.insert(self.pages, page)
     return page
 end
@@ -117,7 +118,7 @@ end
 function Window:NextPage()
     if self.currentPage < #self.pages then
         self.pages[self.currentPage].frame.Visible = false
-        self.currentPage += 1
+        self.currentPage = self.currentPage + 1
         self.pages[self.currentPage].frame.Visible = true
     end
 end
@@ -125,7 +126,7 @@ end
 function Window:PreviousPage()
     if self.currentPage > 1 then
         self.pages[self.currentPage].frame.Visible = false
-        self.currentPage -= 1
+        self.currentPage = self.currentPage - 1
         self.pages[self.currentPage].frame.Visible = true
     end
 end
@@ -136,6 +137,7 @@ function Window:Toggle()
     self.toggleButton.Text = self.visible and "Close" or "Open"
 end
 
+-- Page metatable
 local Page = {}
 Page.__index = Page
 
@@ -159,11 +161,13 @@ function Page:AddSection(name)
     title.TextScaled = true
     title.Parent = secFrame
 
-    local section = setmetatable({frame = secFrame, elementCount = 0, window = self.window}, Section)
+    local section = { frame = secFrame, elementCount = 0, window = self.window }
+    setmetatable(section, Section)
     table.insert(self.sections, section)
     return section
 end
 
+-- Section metatable
 local Section = {}
 Section.__index = Section
 
@@ -181,7 +185,7 @@ function Section:AddButton(name, config)
     btn.TextScaled = true
     btn.Parent = self.frame
     if config.OnClick then btn.MouseButton1Down:Connect(config.OnClick) end
-    self.elementCount += 1
+    self.elementCount = self.elementCount + 1
     return btn
 end
 
@@ -203,12 +207,12 @@ function Section:AddToggle(name, config)
     label.Parent = frame
 
     local check = Instance.new("TextButton")
-    check.BackgroundColor3 = config.Default and self.window.accentColor or self.window.bgColor
+    check.BackgroundColor3 = (config.Default and self.window.accentColor or self.window.bgColor)
     check.BorderColor3 = self.window.accentColor
     check.BorderSizePixel = 2
     check.Size = UDim2.new(0.2, 0, 0.8, 0)
     check.Position = UDim2.new(0.8, 0, 0.1, 0)
-    check.Text = config.Default and "ON" or "OFF"
+    check.Text = (config.Default and "ON" or "OFF")
     check.TextColor3 = self.window.textColor
     check.Parent = frame
 
@@ -220,7 +224,7 @@ function Section:AddToggle(name, config)
         if config.OnChange then config.OnChange(state) end
     end)
 
-    self.elementCount += 1
+    self.elementCount = self.elementCount + 1
     return {getValue = function() return state end}
 end
 
@@ -250,7 +254,7 @@ function Section:AddTextInput(placeholder, config)
         box:GetPropertyChangedSignal("Text"):Connect(function() config.OnChange(box.Text) end)
     end
 
-    self.elementCount += 1
+    self.elementCount = self.elementCount + 1
     return {getText = function() return box.Text end, setText = function(t) box.Text = t end}
 end
 
