@@ -15,7 +15,7 @@ function c00lgui.Window(config)
 
     local mf = Instance.new("Frame", sg)
     mf.Size = UDim2.new(0,300,0,400)
-    mf.Position = UDim2.new(0,0,0,0)  -- Canto da tela
+    mf.Position = UDim2.new(0,10,0.3,0)  -- Posição antiga como tu pediu
     mf.BackgroundColor3 = win.bg
     mf.BorderColor3 = win.accent
     mf.BorderSizePixel = 3
@@ -64,7 +64,7 @@ function c00lgui.Window(config)
 
     local toggleBtn = Instance.new("TextButton", sg)
     toggleBtn.Size = UDim2.new(0,300,0,20)
-    toggleBtn.Position = UDim2.new(0,0,0,400)
+    toggleBtn.Position = UDim2.new(0,10,0.3,400)  -- Embaixo da GUI
     toggleBtn.BackgroundColor3 = win.bg
     toggleBtn.BorderColor3 = win.accent
     toggleBtn.BorderSizePixel = 3
@@ -85,7 +85,7 @@ function c00lgui.Window(config)
             sectionCount = sectionCount + 1
             local col = (sectionCount % 2 == 1) and 0 or 0.5
             local sec = Instance.new("Frame", pageframe)
-            sec.Size = UDim2.new(0.5,-3,1,0)  -- Colunas encostadas
+            sec.Size = UDim2.new(0.5,0,1,0)  -- Colunas totalmente encostadas (gap 0)
             sec.Position = UDim2.new(col,0,0,0)
             sec.BackgroundColor3 = win.bg
             sec.BorderColor3 = win.accent
@@ -106,25 +106,21 @@ function c00lgui.Window(config)
             content.BackgroundTransparency = 1
 
             local grid = Instance.new("UIGridLayout", content)
-            grid.CellSize = UDim2.new(0.5,-3,0,30)  -- 2 botões por linha encostados
-            grid.CellPadding = UDim2.new(0,0,0,3)
+            grid.CellSize = UDim2.new(0.5,0,0,30)  -- 2 botões por linha, encostados (padding 0)
+            grid.CellPadding = UDim2.new(0,0,0,0)  -- ZERO espaçamento
             grid.SortOrder = Enum.SortOrder.LayoutOrder
-            grid.StartCorner = Enum.StartCorner.TopLeft
 
-            local buttonCount = 0
             local section = {}
 
             function section:AddButton(txt, cb)
-                buttonCount = buttonCount + 1
                 local btn = Instance.new("TextButton")
                 btn.Text = txt
                 btn.BackgroundColor3 = win.bg
                 btn.BorderColor3 = win.accent
                 btn.BorderSizePixel = 3
                 btn.TextColor3 = win.text
-                btn.TextSize = 14
+                btn.TextSize = 12  -- Texto bem pequeno
                 btn.Parent = content
-                btn.LayoutOrder = buttonCount
                 if cb then btn.MouseButton1Click:Connect(cb) end
             end
 
