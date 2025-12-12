@@ -106,8 +106,8 @@ function c00lgui.Window(config)
             content.BackgroundTransparency = 1
 
             local grid = Instance.new("UIGridLayout", content)
-            grid.CellSize = UDim2.new(0.5,0,0,30)
-            grid.CellPadding = UDim2.new(0,0,0,0)
+            grid.CellSize = UDim2.new(0.48,0,0,30) -- 2 colunas lado a lado
+            grid.CellPadding = UDim2.new(0,4,0,4) -- espaçamento bonitinho
             grid.SortOrder = Enum.SortOrder.LayoutOrder
 
             local section = {}
