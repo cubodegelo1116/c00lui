@@ -1,14 +1,14 @@
 --[[
-c00lgui Library v2 - FINAL FIX (AddSection funcionando + tabs visíveis)
+c00lgui Library v2 - Corrigidona, com AddSection funcionando e tabs com < >
+Visual old school c00lgui, sections em colunas
 ]]
 
 local c00lgui = {}
-c00lgui.__index = c00lgui
 
 local Window = {}
 Window.__index = Window
 
-function Window.new(config)
+function c00lgui.Window(config)
     local self = setmetatable({}, Window)
     self.title = config.Title or "c00lgui"
     self.position = config.Position or UDim2.new(0, 3, 0.3, 0)
@@ -43,12 +43,10 @@ function Window:_createGui()
     titleLabel.BackgroundColor3 = self.bgColor
     titleLabel.BorderColor3 = self.accentColor
     titleLabel.BorderSizePixel = 3
-    titleLabel.Position = UDim2.new(0, 0, 0, 0)
     titleLabel.Size = UDim2.new(1, 0, 0, 40)
-    titleLabel.Font = Enum.Font.SourceSans
-    titleLabel.TextScaled = true
     titleLabel.Text = self.title
     titleLabel.TextColor3 = self.textColor
+    titleLabel.TextScaled = true
     titleLabel.Parent = self.mainFrame
     self.titleLabel = titleLabel
 
@@ -60,29 +58,28 @@ function Window:_createGui()
     self.tabsContainer.Size = UDim2.new(1, 0, 0, 40)
     self.tabsContainer.Parent = self.mainFrame
 
-    local leftButton = Instance.new("TextButton")
-    leftButton.BackgroundColor3 = self.bgColor
-    leftButton.BorderColor3 = self.accentColor
-    leftButton.BorderSizePixel = 3
-    leftButton.Position = UDim2.new(0, 0, 0, 0)
-    leftButton.Size = UDim2.new(0.5, -2, 1, 0)
-    leftButton.Text = "<"
-    leftButton.TextColor3 = self.textColor
-    leftButton.TextScaled = true
-    leftButton.Parent = self.tabsContainer
-    leftButton.MouseButton1Down:Connect(function() self:PreviousPage() end)
+    local leftBtn = Instance.new("TextButton")
+    leftBtn.BackgroundColor3 = self.bgColor
+    leftBtn.BorderColor3 = self.accentColor
+    leftBtn.BorderSizePixel = 3
+    leftBtn.Size = UDim2.new(0.5, -2, 1, 0)
+    leftBtn.Text = "<"
+    leftBtn.TextColor3 = self.textColor
+    leftBtn.TextScaled = true
+    leftBtn.Parent = self.tabsContainer
+    leftBtn.MouseButton1Down:Connect(function() self:PreviousPage() end)
 
-    local rightButton = Instance.new("TextButton")
-    rightButton.BackgroundColor3 = self.bgColor
-    rightButton.BorderColor3 = self.accentColor
-    rightButton.BorderSizePixel = 3
-    rightButton.Position = UDim2.new(0.5, 2, 0, 0)
-    rightButton.Size = UDim2.new(0.5, -2, 1, 0)
-    rightButton.Text = ">"
-    rightButton.TextColor3 = self.textColor
-    rightButton.TextScaled = true
-    rightButton.Parent = self.tabsContainer
-    rightButton.MouseButton1Down:Connect(function() self:NextPage() end)
+    local rightBtn = Instance.new("TextButton")
+    rightBtn.BackgroundColor3 = self.bgColor
+    rightBtn.BorderColor3 = self.accentColor
+    rightBtn.BorderSizePixel = 3
+    rightBtn.Position = UDim2.new(0.5, 2, 0, 0)
+    rightBtn.Size = UDim2.new(0.5, -2, 1, 0)
+    rightBtn.Text = ">"
+    rightBtn.TextColor3 = self.textColor
+    rightBtn.TextScaled = true
+    rightBtn.Parent = self.tabsContainer
+    rightBtn.MouseButton1Down:Connect(function() self:NextPage() end)
 
     self.pagesContainer = Instance.new("Frame")
     self.pagesContainer.BackgroundColor3 = self.bgColor
@@ -105,15 +102,11 @@ function Window:_createGui()
 end
 
 function Window:AddPage(name)
-    local pageIndex = #self.pages + 1
     local pageFrame = Instance.new("Frame")
-    pageFrame.Name = name
     pageFrame.BackgroundColor3 = self.bgColor
-    pageFrame.BorderColor3 = self.accentColor
-    pageFrame.BorderSizePixel = 3
-    pageFrame.Position = UDim2.new(0, 0, 0, 0)
+    pageFrame.BorderSizePixel = 0
     pageFrame.Size = UDim2.new(1, 0, 1, 0)
-    pageFrame.Visible = (pageIndex == 1)
+    pageFrame.Visible = (#self.pages == 0)
     pageFrame.Parent = self.pagesContainer
 
     local page = setmetatable({frame = pageFrame, sections = {}, window = self}, Page)
@@ -124,7 +117,7 @@ end
 function Window:NextPage()
     if self.currentPage < #self.pages then
         self.pages[self.currentPage].frame.Visible = false
-        self.currentPage = self.currentPage + 1
+        self.currentPage += 1
         self.pages[self.currentPage].frame.Visible = true
     end
 end
@@ -132,7 +125,7 @@ end
 function Window:PreviousPage()
     if self.currentPage > 1 then
         self.pages[self.currentPage].frame.Visible = false
-        self.currentPage = self.currentPage - 1
+        self.currentPage -= 1
         self.pages[self.currentPage].frame.Visible = true
     end
 end
@@ -143,29 +136,22 @@ function Window:Toggle()
     self.toggleButton.Text = self.visible and "Close" or "Open"
 end
 
-function Window:Show() self.visible = true self.mainFrame.Visible = true self.toggleButton.Text = "Close" end
-function Window:Hide() self.visible = false self.mainFrame.Visible = false self.toggleButton.Text = "Open" end
-function Window:Destroy() self.screenGui:Destroy() end
-
 local Page = {}
 Page.__index = Page
 
-function Page:AddSection(name, config)
-    config = config or {}
+function Page:AddSection(name)
     local idx = #self.sections + 1
     local secFrame = Instance.new("Frame")
-    secFrame.Name = name
-    secFrame.BackgroundColor3 = config.BackgroundColor or self.window.bgColor
-    secFrame.BorderColor3 = config.BorderColor or self.window.accentColor
-    secFrame.BorderSizePixel = config.BorderSize or 3
+    secFrame.BackgroundColor3 = self.window.bgColor
+    secFrame.BorderColor3 = self.window.accentColor
+    secFrame.BorderSizePixel = 3
     secFrame.Position = UDim2.new(idx == 1 and 0 or 0.5, idx == 1 and 0 or 3, 0, 0)
     secFrame.Size = UDim2.new(0.5, -6, 1, 0)
-    secFrame.ClipsDescendants = true
     secFrame.Parent = self.frame
 
     local title = Instance.new("TextLabel")
-    title.BackgroundColor3 = secFrame.BackgroundColor3
-    title.BorderColor3 = secFrame.BorderColor3
+    title.BackgroundColor3 = self.window.bgColor
+    title.BorderColor3 = self.window.accentColor
     title.BorderSizePixel = 3
     title.Size = UDim2.new(1, 0, 0, 30)
     title.Text = name
@@ -183,10 +169,10 @@ Section.__index = Section
 
 function Section:AddButton(name, config)
     config = config or {}
-    local y = 30 + (self.elementCount * 35)
+    local y = 30 + self.elementCount * 35
     local btn = Instance.new("TextButton")
-    btn.BackgroundColor3 = config.BackgroundColor or self.window.bgColor
-    btn.BorderColor3 = config.BorderColor or self.window.accentColor
+    btn.BackgroundColor3 = self.window.bgColor
+    btn.BorderColor3 = self.window.accentColor
     btn.BorderSizePixel = 3
     btn.Position = UDim2.new(0, 3, 0, y)
     btn.Size = UDim2.new(1, -6, 0, 30)
@@ -195,13 +181,13 @@ function Section:AddButton(name, config)
     btn.TextScaled = true
     btn.Parent = self.frame
     if config.OnClick then btn.MouseButton1Down:Connect(config.OnClick) end
-    self.elementCount = self.elementCount + 1
+    self.elementCount += 1
     return btn
 end
 
 function Section:AddToggle(name, config)
     config = config or {}
-    local y = 30 + (self.elementCount * 35)
+    local y = 30 + self.elementCount * 35
     local frame = Instance.new("Frame")
     frame.BackgroundTransparency = 1
     frame.Size = UDim2.new(1, -6, 0, 30)
@@ -210,8 +196,7 @@ function Section:AddToggle(name, config)
 
     local label = Instance.new("TextLabel")
     label.BackgroundTransparency = 1
-    label.Size = UDim2.new(0.7, 0, 1, 0)
-    label.Position = UDim2.new(0, 0, 0, 0)
+    label.Size = UDim2.new(0.75, 0, 1, 0)
     label.Text = name
     label.TextColor3 = self.window.textColor
     label.TextXAlignment = Enum.TextXAlignment.Left
@@ -235,16 +220,16 @@ function Section:AddToggle(name, config)
         if config.OnChange then config.OnChange(state) end
     end)
 
-    self.elementCount = self.elementCount + 1
+    self.elementCount += 1
     return {getValue = function() return state end}
 end
 
 function Section:AddTextInput(placeholder, config)
     config = config or {}
-    local y = 30 + (self.elementCount * 35)
+    local y = 30 + self.elementCount * 35
     local frame = Instance.new("Frame")
-    frame.BackgroundColor3 = config.BackgroundColor or self.window.bgColor
-    frame.BorderColor3 = config.BorderColor or self.window.accentColor
+    frame.BackgroundColor3 = self.window.bgColor
+    frame.BorderColor3 = self.window.accentColor
     frame.BorderSizePixel = 3
     frame.Position = UDim2.new(0, 3, 0, y)
     frame.Size = UDim2.new(1, -6, 0, 30)
@@ -265,9 +250,8 @@ function Section:AddTextInput(placeholder, config)
         box:GetPropertyChangedSignal("Text"):Connect(function() config.OnChange(box.Text) end)
     end
 
-    self.elementCount = self.elementCount + 1
-    return {input = box, getText = function() return box.Text end, setText = function(t) box.Text = t end}
+    self.elementCount += 1
+    return {getText = function() return box.Text end, setText = function(t) box.Text = t end}
 end
 
-function c00lgui.Window(config) return Window.new(config) end
 return c00lgui
