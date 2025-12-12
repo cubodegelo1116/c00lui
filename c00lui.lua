@@ -21,7 +21,7 @@ function c00lgui.Window(config)
     mf.BorderColor3 = win.accent
     mf.BorderSizePixel = 3
 
-    -- TÍTULO (sem borda pra não duplicar)
+    -- TÍTULO
     local title = Instance.new("TextLabel", mf)
     title.Size = UDim2.new(1,0,0,30)
     title.Text = win.title
@@ -30,14 +30,14 @@ function c00lgui.Window(config)
     title.TextColor3 = win.text
     title.TextSize = 15
 
-    -- NAV (sem borda top, usa borda do mf)
+    -- NAV
     local nav = Instance.new("Frame", mf)
     nav.Size = UDim2.new(1,0,0,40)
     nav.Position = UDim2.new(0,0,0,30)
     nav.BackgroundColor3 = win.bg
     nav.BorderSizePixel = 0
 
-    -- BOTÃO < (um pouco maior pra borda 3 não esmagar)
+    -- BOTÕES DE NAVEGAÇÃO
     local left = Instance.new("TextButton", nav)
     left.Size = UDim2.new(0.5,-6,1,-6)
     left.Position = UDim2.new(0,3,0,3)
@@ -48,7 +48,6 @@ function c00lgui.Window(config)
     left.BorderSizePixel = 3
     left.TextColor3 = win.text
 
-    -- BOTÃO >
     local right = Instance.new("TextButton", nav)
     right.Size = UDim2.new(0.5,-6,1,-6)
     right.Position = UDim2.new(0.5,3,0,3)
@@ -74,11 +73,22 @@ function c00lgui.Window(config)
     toggleBtn.BorderSizePixel = 3
     toggleBtn.Text = "Close"
     toggleBtn.TextColor3 = win.text
-toggleBtn.TextScaled = false
-toggleBtn.TextSize = 12 -- escolhe o número que quiser
+    toggleBtn.TextScaled = false
+    toggleBtn.TextSize = 12
 
+    -- Toggle funcionando sempre
+    toggleBtn.MouseButton1Click:Connect(function()
+        local newState = not mf.Visible
+        mf.Visible = newState
 
-    -- SISTEMA DE PAGE
+        for i, page in ipairs(win.pages) do
+            page.frame.Visible = newState and (i == win.current) or false
+        end
+
+        toggleBtn.Text = newState and "Close" or "Open"
+    end)
+
+    -- SISTEMA DE PAGES
     function win:AddPage()
         local pageframe = Instance.new("Frame", container)
         pageframe.Size = UDim2.new(1,0,1,0)
@@ -92,7 +102,7 @@ toggleBtn.TextSize = 12 -- escolhe o número que quiser
             sectionCount += 1
             local isLeft = (sectionCount % 2 == 1)
 
-            -- SECTION (borda 3, alinhada)
+            -- SECTION
             local sec = Instance.new("Frame", pageframe)
             sec.Size = UDim2.new(0.5, -2, 1, 0)
             sec.Position = isLeft
@@ -102,7 +112,7 @@ toggleBtn.TextSize = 12 -- escolhe o número que quiser
             sec.BorderColor3 = win.accent
             sec.BorderSizePixel = 3
 
-            -- TÍTULO DA SECTION (sem borda pra não duplicar)
+            -- TÍTULO
             local tit = Instance.new("TextLabel", sec)
             tit.Size = UDim2.new(1,0,0,25)
             tit.Text = name
@@ -111,7 +121,7 @@ toggleBtn.TextSize = 12 -- escolhe o número que quiser
             tit.BorderSizePixel = 0
             tit.TextSize = 12
 
-            -- ÁREA INTERNA DA SECTION
+            -- CONTEÚDO
             local content = Instance.new("Frame", sec)
             content.Size = UDim2.new(1,0,1,-25)
             content.Position = UDim2.new(0,0,0,25)
@@ -158,21 +168,6 @@ toggleBtn.TextSize = 12 -- escolhe o número que quiser
                 win.pages[win.current].frame.Visible = true
             end
         end)
-
-        -- BOTÃO OPEN/CLOSE
--- BOTÃO OPEN/CLOSE (mantendo o mesmo toggleBtn)
-toggleBtn.MouseButton1Click:Connect(function()
-    local newState = not mf.Visible
-    mf.Visible = newState
-
-    -- Garante que só a página atual apareça quando abrir
-    for i, page in ipairs(win.pages) do
-        page.frame.Visible = newState and (i == win.current) or false
-    end
-
-    toggleBtn.Text = newState and "Close" or "Open"
-end)
-
 
         table.insert(win.pages, {frame = pageframe})
         return page
