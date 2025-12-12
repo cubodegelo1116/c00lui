@@ -74,7 +74,7 @@ function c00lgui.Window(config)
     toggleBtn.Text = "Close"
     toggleBtn.TextColor3 = win.text
     toggleBtn.TextScaled = false
-    toggleBtn.TextSize = 12
+    toggleBtn.TextSize = 9
 
     -- Toggle funcionando sempre
     toggleBtn.MouseButton1Click:Connect(function()
