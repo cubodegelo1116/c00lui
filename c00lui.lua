@@ -74,7 +74,9 @@ function c00lgui.Window(config)
     toggleBtn.BorderSizePixel = 3
     toggleBtn.Text = "Close"
     toggleBtn.TextColor3 = win.text
-    toggleBtn.TextScaled = true
+toggleBtn.TextScaled = false
+toggleBtn.TextSize = 12 -- escolhe o número que quiser
+
 
     -- SISTEMA DE PAGE
     function win:AddPage()
