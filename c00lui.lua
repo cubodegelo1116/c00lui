@@ -158,10 +158,19 @@ function c00lgui.Window(config)
         end)
 
         -- BOTÃO OPEN/CLOSE
-        toggleBtn.MouseButton1Click:Connect(function()
-            mf.Visible = not mf.Visible
-            toggleBtn.Text = mf.Visible and "Close" or "Open"
-        end)
+-- BOTÃO OPEN/CLOSE (mantendo o mesmo toggleBtn)
+toggleBtn.MouseButton1Click:Connect(function()
+    local newState = not mf.Visible
+    mf.Visible = newState
+
+    -- Garante que só a página atual apareça quando abrir
+    for i, page in ipairs(win.pages) do
+        page.frame.Visible = newState and (i == win.current) or false
+    end
+
+    toggleBtn.Text = newState and "Close" or "Open"
+end)
+
 
         table.insert(win.pages, {frame = pageframe})
         return page
