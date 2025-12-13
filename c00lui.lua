@@ -190,20 +190,25 @@ function c00lui:Window(config)
             ------------------------------------------------
 
             function section:AddBigLabel(text)
-                local lbl = Instance.new("TextLabel", content)
-                lbl.Text = text
-                lbl.BackgroundColor3 = win.bg
-                lbl.BorderColor3 = win.accent
-                lbl.BorderSizePixel = 3
-                lbl.TextColor3 = win.text
-                lbl.TextSize = 9
-                lbl.TextWrapped = true
-                lbl.TextXAlignment = Enum.TextXAlignment.Center
-                lbl.TextYAlignment = Enum.TextYAlignment.Center
+    -- wrapper ocupa 2 colunas
+    local wrap = Instance.new("Frame", content)
+    wrap.BackgroundTransparency = 1
+    wrap.Size = UDim2.new(1, -4, 0, 30)
+    wrap.LayoutOrder = 998
 
-                lbl.Size = UDim2.new(1, -4, 0, 30)
-                lbl.LayoutOrder = 998
-            end
+    local lbl = Instance.new("TextLabel", wrap)
+    lbl.Size = UDim2.new(1,0,1,0)
+    lbl.Text = text
+    lbl.BackgroundColor3 = win.bg
+    lbl.BorderColor3 = win.accent
+    lbl.BorderSizePixel = 3
+    lbl.TextColor3 = win.text
+    lbl.TextSize = 9
+    lbl.TextWrapped = true
+    lbl.TextXAlignment = Enum.TextXAlignment.Center
+    lbl.TextYAlignment = Enum.TextYAlignment.Center
+end
+
 
             ------------------------------------------------
             -- ADD TEXTBOX (2 COLUNAS)
