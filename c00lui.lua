@@ -1,7 +1,11 @@
 --[[ 
-    c00lUI Library v3.1
-    Window > Pages > Sections > Buttons > Textbox
-    Textbox ocupa 2 espaços (2 colunas)
+    c00lUI Library v3.2
+    Window > Pages > Sections
+    Items:
+    - Button (1 coluna)
+    - Label (1 coluna)
+    - BigLabel (2 colunas)
+    - Textbox (2 colunas)
 ]]
 
 local c00lui = {}
@@ -9,11 +13,12 @@ local c00lui = {}
 function c00lui:Window(config)
     config = config or {}
     local win = {}
-    win.title = config.Title or "Super Natural"
+
+    win.title  = config.Title or "Super Natural"
     win.accent = config.AccentColor or Color3.fromRGB(255,0,0)
-    win.bg = Color3.fromRGB(0,0,0)
-    win.text = Color3.fromRGB(255,255,255)
-    win.pages = {}
+    win.bg     = Color3.fromRGB(0,0,0)
+    win.text   = Color3.fromRGB(255,255,255)
+    win.pages  = {}
     win.current = 1
 
     ------------------------------------------------
@@ -164,6 +169,43 @@ function c00lui:Window(config)
             end
 
             ------------------------------------------------
+            -- ADD LABEL (1 COLUNA)
+            ------------------------------------------------
+
+            function section:AddLabel(text)
+                local lbl = Instance.new("TextLabel", content)
+                lbl.Text = text
+                lbl.BackgroundColor3 = win.bg
+                lbl.BorderColor3 = win.accent
+                lbl.BorderSizePixel = 3
+                lbl.TextColor3 = win.text
+                lbl.TextSize = 9
+                lbl.TextWrapped = true
+                lbl.TextXAlignment = Enum.TextXAlignment.Center
+                lbl.TextYAlignment = Enum.TextYAlignment.Center
+            end
+
+            ------------------------------------------------
+            -- ADD LABEL GRANDE (2 COLUNAS)
+            ------------------------------------------------
+
+            function section:AddBigLabel(text)
+                local lbl = Instance.new("TextLabel", content)
+                lbl.Text = text
+                lbl.BackgroundColor3 = win.bg
+                lbl.BorderColor3 = win.accent
+                lbl.BorderSizePixel = 3
+                lbl.TextColor3 = win.text
+                lbl.TextSize = 9
+                lbl.TextWrapped = true
+                lbl.TextXAlignment = Enum.TextXAlignment.Center
+                lbl.TextYAlignment = Enum.TextYAlignment.Center
+
+                lbl.Size = UDim2.new(1, -4, 0, 30)
+                lbl.LayoutOrder = 998
+            end
+
+            ------------------------------------------------
             -- ADD TEXTBOX (2 COLUNAS)
             ------------------------------------------------
 
@@ -180,7 +222,6 @@ function c00lui:Window(config)
                 box.TextSize = 10
                 box.TextWrapped = true
 
-                -- ocupa duas colunas
                 box.Size = UDim2.new(1, -4, 0, 30)
                 box.LayoutOrder = 999
 
