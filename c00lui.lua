@@ -1,12 +1,5 @@
 --[[ 
-    c00lUI Library v3.4
-    Window > Pages > Sections
-
-    Items:
-    - Button (1 coluna)
-    - Label (2 colunas)
-    - SmallTextbox (1 coluna)
-    - BigTextbox (2 colunas)
+    c00lUI Library v5
 ]]
 
 local c00lui = {}
@@ -15,7 +8,7 @@ function c00lui:Window(config)
     config = config or {}
     local win = {}
 
-    win.title  = config.Title or "Super Natural"
+    win.title  = config.Title or "c00lgui"
     win.accent = config.AccentColor or Color3.fromRGB(255,0,0)
     win.bg     = Color3.fromRGB(0,0,0)
     win.text   = Color3.fromRGB(255,255,255)
