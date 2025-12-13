@@ -1,10 +1,10 @@
 --[[ 
-    c00lUI Library v3.3
+    c00lUI Library v3.4
     Window > Pages > Sections
 
     Items:
     - Button (1 coluna)
-    - Label (2 colunas)  <-- SÓ ESSE
+    - Label (2 colunas)
     - SmallTextbox (1 coluna)
     - BigTextbox (2 colunas)
 ]]
@@ -23,10 +23,22 @@ function c00lui:Window(config)
     win.current = 1
 
     ------------------------------------------------
+    -- REMOVE GUIS ANTIGAS
+    ------------------------------------------------
+
+    for _,v in ipairs(game.CoreGui:GetChildren()) do
+        if v:IsA("ScreenGui") and v.Name == "c00lUI" then
+            v:Destroy()
+        end
+    end
+
+    ------------------------------------------------
     -- BASE
     ------------------------------------------------
 
-    local sg = Instance.new("ScreenGui", game.CoreGui)
+    local sg = Instance.new("ScreenGui")
+    sg.Name = "c00lUI"
+    sg.Parent = game.CoreGui
     sg.ResetOnSpawn = false
 
     local mf = Instance.new("Frame", sg)
@@ -43,6 +55,7 @@ function c00lui:Window(config)
     title.BorderSizePixel = 0
     title.TextColor3 = win.text
     title.TextSize = 15
+    title.TextWrapped = true
 
     ------------------------------------------------
     -- NAV
@@ -91,6 +104,7 @@ function c00lui:Window(config)
     toggleBtn.BorderSizePixel = 3
     toggleBtn.TextColor3 = win.text
     toggleBtn.TextSize = 9
+    toggleBtn.TextWrapped = true
 
     toggleBtn.MouseButton1Click:Connect(function()
         local st = not mf.Visible
@@ -133,135 +147,109 @@ function c00lui:Window(config)
             tit.BorderSizePixel = 0
             tit.TextColor3 = win.text
             tit.TextSize = 12
+            tit.TextWrapped = true
 
             local content = Instance.new("Frame", sec)
             content.Size = UDim2.new(1,0,1,-25)
             content.Position = UDim2.new(0,0,0,25)
             content.BackgroundTransparency = 1
 
-            -- layout manual
-            local cursorY = 0
-            local col = 0
-            local padding = 4
-            local height = 30
+            local cursorY, col = 0, 0
+            local padding, height = 4, 30
 
             local function colWidth()
                 return (content.AbsoluteSize.X - padding) / 2
             end
 
-            local section = {}
+            local function styleText(obj)
+                obj.TextWrapped = true
+                obj.TextXAlignment = Enum.TextXAlignment.Center
+                obj.TextYAlignment = Enum.TextYAlignment.Center
 
-            ------------------------------------------------
-            -- BUTTON (1 COLUNA)
-            ------------------------------------------------
+                local pad = Instance.new("UIPadding", obj)
+                pad.PaddingLeft = UDim.new(0,6)
+                pad.PaddingRight = UDim.new(0,6)
+            end
+
+            local section = {}
 
             function section:AddButton(text, callback)
                 local w = colWidth()
-
                 local btn = Instance.new("TextButton", content)
-                btn.Size = UDim2.new(0, w, 0, height)
-                btn.Position = UDim2.new(0, col * (w + padding), 0, cursorY)
+                btn.Size = UDim2.new(0,w,0,height)
+                btn.Position = UDim2.new(0,col*(w+padding),0,cursorY)
                 btn.Text = text
-
                 btn.BackgroundColor3 = win.bg
                 btn.BorderColor3 = win.accent
                 btn.BorderSizePixel = 3
                 btn.TextColor3 = win.text
                 btn.TextSize = 9
-                btn.TextWrapped = true
+                styleText(btn)
 
                 if callback then
                     btn.MouseButton1Click:Connect(callback)
                 end
 
                 col += 1
-                if col >= 2 then
-                    col = 0
-                    cursorY += height + padding
-                end
+                if col >= 2 then col = 0 cursorY += height + padding end
             end
-
-            ------------------------------------------------
-            -- LABEL (2 COLUNAS)
-            ------------------------------------------------
 
             function section:AddLabel(text)
                 col = 0
-
                 local lbl = Instance.new("TextLabel", content)
                 lbl.Size = UDim2.new(1,0,0,height)
                 lbl.Position = UDim2.new(0,0,0,cursorY)
                 lbl.Text = text
-
                 lbl.BackgroundColor3 = win.bg
                 lbl.BorderColor3 = win.accent
                 lbl.BorderSizePixel = 3
                 lbl.TextColor3 = win.text
                 lbl.TextSize = 9
-                lbl.TextWrapped = true
-                lbl.TextXAlignment = Enum.TextXAlignment.Center
-                lbl.TextYAlignment = Enum.TextYAlignment.Center
+                styleText(lbl)
 
                 cursorY += height + padding
             end
 
-            ------------------------------------------------
-            -- SMALL TEXTBOX (1 COLUNA)
-            ------------------------------------------------
-
             function section:AddSmallTextbox(placeholder, callback)
                 local w = colWidth()
-
                 local box = Instance.new("TextBox", content)
-                box.Size = UDim2.new(0, w, 0, height)
-                box.Position = UDim2.new(0, col * (w + padding), 0, cursorY)
+                box.Size = UDim2.new(0,w,0,height)
+                box.Position = UDim2.new(0,col*(w+padding),0,cursorY)
                 box.PlaceholderText = placeholder or "Digite..."
                 box.Text = ""
                 box.ClearTextOnFocus = false
-
                 box.BackgroundColor3 = win.bg
                 box.BorderColor3 = win.accent
                 box.BorderSizePixel = 3
                 box.TextColor3 = win.text
                 box.TextSize = 10
+                styleText(box)
 
-                box.FocusLost:Connect(function(enter)
-                    if callback then
-                        callback(box.Text, enter)
-                    end
+                box.FocusLost:Connect(function(e)
+                    if callback then callback(box.Text, e) end
                 end)
 
                 col += 1
-                if col >= 2 then
-                    col = 0
-                    cursorY += height + padding
-                end
+                if col >= 2 then col = 0 cursorY += height + padding end
             end
-
-            ------------------------------------------------
-            -- BIG TEXTBOX (2 COLUNAS)
-            ------------------------------------------------
 
             function section:AddBigTextbox(placeholder, callback)
                 col = 0
-
                 local box = Instance.new("TextBox", content)
                 box.Size = UDim2.new(1,0,0,height)
                 box.Position = UDim2.new(0,0,0,cursorY)
                 box.PlaceholderText = placeholder or "Digite aqui..."
                 box.Text = ""
                 box.ClearTextOnFocus = false
-
                 box.BackgroundColor3 = win.bg
                 box.BorderColor3 = win.accent
                 box.BorderSizePixel = 3
                 box.TextColor3 = win.text
                 box.TextSize = 10
+                styleText(box)
 
-                box.FocusLost:Connect(function(enter)
-                    if callback then
-                        callback(box.Text, enter)
-                    end
+                box.FocusLost:Connect(function(e)
+                    if callback then callback(box.Text, e) end
                 end)
 
                 cursorY += height + padding
@@ -273,10 +261,6 @@ function c00lui:Window(config)
         table.insert(win.pages, page)
         return page
     end
-
-    ------------------------------------------------
-    -- NAV
-    ------------------------------------------------
 
     left.MouseButton1Click:Connect(function()
         if win.current > 1 then
