@@ -1,7 +1,7 @@
 --[[ 
-    c00lUI Library v3
-    GUI totalmente modular, minimalista e dividida em:
-    Window > Pages > Sections > Buttons
+    c00lUI Library v3.1
+    Window > Pages > Sections > Buttons > Textbox
+    Textbox ocupa 2 espaços (2 colunas)
 ]]
 
 local c00lui = {}
@@ -16,9 +16,9 @@ function c00lui:Window(config)
     win.pages = {}
     win.current = 1
 
-    -----------------------------------------
-    ----------- BASE DA JANELA --------------
-    -----------------------------------------
+    ------------------------------------------------
+    -- BASE
+    ------------------------------------------------
 
     local sg = Instance.new("ScreenGui", game.CoreGui)
     sg.ResetOnSpawn = false
@@ -38,6 +38,10 @@ function c00lui:Window(config)
     title.TextColor3 = win.text
     title.TextSize = 15
 
+    ------------------------------------------------
+    -- NAV
+    ------------------------------------------------
+
     local nav = Instance.new("Frame", mf)
     nav.Size = UDim2.new(1,0,0,40)
     nav.Position = UDim2.new(0,0,0,30)
@@ -46,7 +50,6 @@ function c00lui:Window(config)
 
     local left = Instance.new("TextButton", nav)
     left.Size = UDim2.new(0.5,0,1,0)
-    left.Position = UDim2.new(0,0,0,0)
     left.Text = "<"
     left.TextScaled = true
     left.BackgroundColor3 = win.bg
@@ -69,17 +72,17 @@ function c00lui:Window(config)
     container.Position = UDim2.new(0,0,0,70)
     container.BackgroundTransparency = 1
 
-    -----------------------------------------
-    ------------- BOTÃO TOGGLE --------------
-    -----------------------------------------
+    ------------------------------------------------
+    -- TOGGLE
+    ------------------------------------------------
 
     local toggleBtn = Instance.new("TextButton", sg)
     toggleBtn.Size = UDim2.new(0,300,0,20)
     toggleBtn.Position = UDim2.new(0,10,0.3,400)
+    toggleBtn.Text = "Close"
     toggleBtn.BackgroundColor3 = win.bg
     toggleBtn.BorderColor3 = win.accent
     toggleBtn.BorderSizePixel = 3
-    toggleBtn.Text = "Close"
     toggleBtn.TextColor3 = win.text
     toggleBtn.TextSize = 9
 
@@ -94,9 +97,9 @@ function c00lui:Window(config)
         toggleBtn.Text = st and "Close" or "Open"
     end)
 
-    -----------------------------------------
-    ------------- FUNÇÃO ADD PAGE -----------
-    -----------------------------------------
+    ------------------------------------------------
+    -- ADD PAGE
+    ------------------------------------------------
 
     function win:AddPage()
         local pageframe = Instance.new("Frame", container)
@@ -104,22 +107,19 @@ function c00lui:Window(config)
         pageframe.BackgroundTransparency = 1
         pageframe.Visible = (#win.pages == 0)
 
-        local page = {frame = pageframe, sections = {}, sectionCount = 0}
+        local page = {frame = pageframe, sectionCount = 0}
 
-        -----------------------------------------
-        ----------- FUNÇÃO ADD SECTION ----------
-        -----------------------------------------
+        ------------------------------------------------
+        -- ADD SECTION
+        ------------------------------------------------
 
         function page:AddSection(name)
             page.sectionCount += 1
-
             local leftSide = (page.sectionCount % 2 == 1)
 
             local sec = Instance.new("Frame", pageframe)
             sec.Size = UDim2.new(0.5,0,1,0)
-            sec.Position = leftSide
-                and UDim2.new(0,0,0,0)
-                or  UDim2.new(0.5,0,0,0)
+            sec.Position = leftSide and UDim2.new(0,0,0,0) or UDim2.new(0.5,0,0,0)
             sec.BackgroundColor3 = win.bg
             sec.BorderColor3 = win.accent
             sec.BorderSizePixel = 3
@@ -127,9 +127,9 @@ function c00lui:Window(config)
             local tit = Instance.new("TextLabel", sec)
             tit.Size = UDim2.new(1,0,0,25)
             tit.Text = name
-            tit.TextColor3 = win.text
             tit.BackgroundColor3 = win.bg
             tit.BorderSizePixel = 0
+            tit.TextColor3 = win.text
             tit.TextSize = 12
 
             local content = Instance.new("Frame", sec)
@@ -140,12 +140,13 @@ function c00lui:Window(config)
             local grid = Instance.new("UIGridLayout", content)
             grid.CellSize = UDim2.new(0.48,0,0,30)
             grid.CellPadding = UDim2.new(0,4,0,4)
+            grid.FillDirectionMaxCells = 2
 
-            local section = {content = content}
+            local section = {}
 
-            -----------------------------------------
-            --------------- ADD BUTTON --------------
-            -----------------------------------------
+            ------------------------------------------------
+            -- ADD BUTTON
+            ------------------------------------------------
 
             function section:AddButton(text, callback)
                 local btn = Instance.new("TextButton", content)
@@ -162,17 +163,44 @@ function c00lui:Window(config)
                 end
             end
 
+            ------------------------------------------------
+            -- ADD TEXTBOX (2 COLUNAS)
+            ------------------------------------------------
+
+            function section:AddTextbox(placeholder, callback)
+                local box = Instance.new("TextBox", content)
+                box.PlaceholderText = placeholder or "Digite aqui..."
+                box.Text = ""
+                box.ClearTextOnFocus = false
+
+                box.BackgroundColor3 = win.bg
+                box.BorderColor3 = win.accent
+                box.BorderSizePixel = 3
+                box.TextColor3 = win.text
+                box.TextSize = 10
+                box.TextWrapped = true
+
+                -- ocupa duas colunas
+                box.Size = UDim2.new(1, -4, 0, 30)
+                box.LayoutOrder = 999
+
+                box.FocusLost:Connect(function(enter)
+                    if callback then
+                        callback(box.Text, enter)
+                    end
+                end)
+            end
+
             return section
         end
 
         table.insert(win.pages, page)
-
         return page
     end
 
-    -----------------------------------------
-    ----------- SISTEMA NAV < > -------------
-    -----------------------------------------
+    ------------------------------------------------
+    -- NAV < >
+    ------------------------------------------------
 
     left.MouseButton1Click:Connect(function()
         if win.current > 1 then
