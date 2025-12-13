@@ -1,86 +1,72 @@
-C00LUI - Biblioteca GUI para Roblox
+# c00lUI - Simple Roblox UI Library
 
-C00LUI é uma biblioteca minimalista e poderosa para criar GUIs customizadas no Roblox. Com ela você pode facilmente criar:
+A lightweight, no-dependency UI library for Roblox executors that creates draggable windows with tabs, sections, buttons, labels, and textboxes directly in `CoreGui`.
 
-Janelas com título personalizado
+GitHub: https://github.com/cubodegelo1116/c00lui  
+Raw file: https://raw.githubusercontent.com/cubodegelo1116/c00lui/main/c00lui.lua
 
-Várias páginas (tabs) navegáveis
+## Installation
 
-Sections (colunas) dentro das páginas
-
-Botões com callbacks
-
-Toggle Open/Close automático da GUI
-
-📦 Como instalar / usar
-
-Basta carregar a lib via loadstring:
-
-local c00lgui = loadstring(game:HttpGet("https://raw.githubusercontent.com/cubodegelo1116/c00lui/refs/heads/main/c00lui.lua"))()
-
-
-Depois, crie a janela principal:
-
-local win = c00lgui.Window({
-    Title = "Teste C00L",                  -- Nome da GUI
-    AccentColor = Color3.fromRGB(0,255,128) -- Cor de destaque (verde claro)
+```lua
+local c00lui = loadstring(game:HttpGet("https://raw.githubusercontent.com/cubodegelo1116/c00lui/main/c00lui.lua"))()
+Creating a Window
+Lualocal ui = c00lui:Window({
+    Title = "My Executor",                    -- Window title (default: "c00lgui")
+    AccentColor = Color3.fromRGB(0, 170, 255) -- Accent/border color (default: red)
 })
-
-🔹 Criando páginas (Tabs)
-
-Para criar uma página/tab:
-
-local page1 = win:AddPage()
-
-
-Cada página criada é automaticamente adicionada à navegação (< e >)
-
-A primeira página criada é a página inicial visível
-
-🔹 Criando sections (colunas dentro da página)
-
-Dentro de cada página, você pode criar sections:
-
-local sec1 = page1:AddSection("Movimento")
-local sec2 = page1:AddSection("Pulo/Fly")
-
-
-Sections ficam lado a lado (primeira esquerda, segunda direita, terceira esquerda, etc.)
-
-Cada section pode ter quantos botões você quiser
-
-🔹 Adicionando botões
-
-Dentro de cada section, você adiciona botões com:
-
-sec1:AddButton("Aumentar Speed", function()
-    local plr = game.Players.LocalPlayer
-    if plr.Character and plr.Character:FindFirstChild("Humanoid") then
-        plr.Character.Humanoid.WalkSpeed = 50
-        print("Speed aumentado!")
+The window is draggable and can be toggled with the keybind shown in the top-right corner (default: RightControl).
+Adding Pages (Tabs)
+Lualocal mainPage   = ui:AddPage()  -- First page (visible by default)
+local settingsPage = ui:AddPage() -- Additional pages
+Switch pages using the < and > buttons at the top.
+Adding Sections
+Sections are automatically placed in two columns.
+Lualocal executorSection = mainPage:AddSection("Script Executor")
+local infoSection     = mainPage:AddSection("Information")
+Section Functions
+AddButton(text: string, callback: function)
+Adds a button (two columns layout).
+LuaexecutorSection:AddButton("Clear", function()
+    -- your code
+end)
+AddLabel(text: string)
+Adds a full-width label.
+LuainfoSection:AddLabel("Super Natural Executor v1.0")
+infoSection:AddLabel("Made with c00lUI")
+AddSmallTextbox(placeholder: string, callback: function(text))
+Adds a half-width textbox (two per row). Callback fires on Enter or focus loss.
+LuaexecutorSection:AddSmallTextbox("Target player...", function(name)
+    print("Target:", name)
+end)
+AddBigTextbox(placeholder: string, callback: function(text))
+Adds a full-width multiline textbox - perfect for script execution.
+LuaexecutorSection:AddBigTextbox("Paste your script here...", function(script)
+    if script ~= "" then
+        loadstring(script)()
     end
 end)
+executorSection:AddButton("Execute", function()
+-- Optional extra logic before execution
+end)
+Full Example
+Lualocal c00lui = loadstring(game:HttpGet("https://raw.githubusercontent.com/cubodegelo1116/c00lui/main/c00lui.lua"))()
 
+local window = c00lui:Window({
+    Title = "Super Natural",
+    AccentColor = Color3.fromRGB(0, 255, 255)
+})
 
-Parâmetros:
+local page = window:AddPage()
 
-Texto do botão
+local exec = page:AddSection("Executor")
+exec:AddBigTextbox("Paste script here...", function(code)
+    if code ~= "" then loadstring(code)() end
+end)
+exec:AddButton("Execute", function() end) -- placeholder or additional logic
 
-Função callback executada ao clicar
-
-🔹 Navegação entre páginas
-
-A lib cria automaticamente botões < e > na parte superior:
-
--- "<" vai para a página anterior
--- ">" vai para a próxima página
-
-
-Você não precisa criar nada para isso.
-
-🔹 Botão Open/Close da GUI
-
-A lib cria um botão toggle para minimizar/abrir a GUI:
-
--- O botão troca o texto automaticamente entre "Open" e "Close"
--- e esconde ou mostra a janela
+local info = page:AddSection("Info")
+info:AddLabel("Super Natural Executor")
+info:AddLabel("UI Library: c00lUI")
+info:AddLabel("Enjoy!")
+That's it! The library is intentionally minimal, fast, and works on every modern executor (including your Super Natural made in Visual Studio).
+Need toggles, sliders, color pickers or better drag? Just ask - happy to help extend it.
