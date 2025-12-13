@@ -1,11 +1,12 @@
 --[[ 
-    c00lUI Library v3.2
+    c00lUI Library v3.3
     Window > Pages > Sections
+
     Items:
     - Button (1 coluna)
-    - Label (1 coluna)
-    - BigLabel (2 colunas)
-    - Textbox (2 colunas)
+    - Label (2 colunas)  <-- SÓ ESSE
+    - SmallTextbox (1 coluna)
+    - BigTextbox (2 colunas)
 ]]
 
 local c00lui = {}
@@ -114,10 +115,6 @@ function c00lui:Window(config)
 
         local page = {frame = pageframe, sectionCount = 0}
 
-        ------------------------------------------------
-        -- ADD SECTION
-        ------------------------------------------------
-
         function page:AddSection(name)
             page.sectionCount += 1
             local leftSide = (page.sectionCount % 2 == 1)
@@ -142,20 +139,30 @@ function c00lui:Window(config)
             content.Position = UDim2.new(0,0,0,25)
             content.BackgroundTransparency = 1
 
-            local grid = Instance.new("UIGridLayout", content)
-            grid.CellSize = UDim2.new(0.48,0,0,30)
-            grid.CellPadding = UDim2.new(0,4,0,4)
-            grid.FillDirectionMaxCells = 2
+            -- layout manual
+            local cursorY = 0
+            local col = 0
+            local padding = 4
+            local height = 30
+
+            local function colWidth()
+                return (content.AbsoluteSize.X - padding) / 2
+            end
 
             local section = {}
 
             ------------------------------------------------
-            -- ADD BUTTON
+            -- BUTTON (1 COLUNA)
             ------------------------------------------------
 
             function section:AddButton(text, callback)
+                local w = colWidth()
+
                 local btn = Instance.new("TextButton", content)
+                btn.Size = UDim2.new(0, w, 0, height)
+                btn.Position = UDim2.new(0, col * (w + padding), 0, cursorY)
                 btn.Text = text
+
                 btn.BackgroundColor3 = win.bg
                 btn.BorderColor3 = win.accent
                 btn.BorderSizePixel = 3
@@ -166,15 +173,26 @@ function c00lui:Window(config)
                 if callback then
                     btn.MouseButton1Click:Connect(callback)
                 end
+
+                col += 1
+                if col >= 2 then
+                    col = 0
+                    cursorY += height + padding
+                end
             end
 
             ------------------------------------------------
-            -- ADD LABEL (1 COLUNA)
+            -- LABEL (2 COLUNAS)
             ------------------------------------------------
 
             function section:AddLabel(text)
+                col = 0
+
                 local lbl = Instance.new("TextLabel", content)
+                lbl.Size = UDim2.new(1,0,0,height)
+                lbl.Position = UDim2.new(0,0,0,cursorY)
                 lbl.Text = text
+
                 lbl.BackgroundColor3 = win.bg
                 lbl.BorderColor3 = win.accent
                 lbl.BorderSizePixel = 3
@@ -183,39 +201,53 @@ function c00lui:Window(config)
                 lbl.TextWrapped = true
                 lbl.TextXAlignment = Enum.TextXAlignment.Center
                 lbl.TextYAlignment = Enum.TextYAlignment.Center
+
+                cursorY += height + padding
             end
 
             ------------------------------------------------
-            -- ADD LABEL GRANDE (2 COLUNAS)
+            -- SMALL TEXTBOX (1 COLUNA)
             ------------------------------------------------
 
-            function section:AddBigLabel(text)
-    -- wrapper ocupa 2 colunas
-    local wrap = Instance.new("Frame", content)
-    wrap.BackgroundTransparency = 1
-    wrap.Size = UDim2.new(1, -4, 0, 30)
-    wrap.LayoutOrder = 998
+            function section:AddSmallTextbox(placeholder, callback)
+                local w = colWidth()
 
-    local lbl = Instance.new("TextLabel", wrap)
-    lbl.Size = UDim2.new(1,0,1,0)
-    lbl.Text = text
-    lbl.BackgroundColor3 = win.bg
-    lbl.BorderColor3 = win.accent
-    lbl.BorderSizePixel = 3
-    lbl.TextColor3 = win.text
-    lbl.TextSize = 9
-    lbl.TextWrapped = true
-    lbl.TextXAlignment = Enum.TextXAlignment.Center
-    lbl.TextYAlignment = Enum.TextYAlignment.Center
-end
-
-
-            ------------------------------------------------
-            -- ADD TEXTBOX (2 COLUNAS)
-            ------------------------------------------------
-
-            function section:AddTextbox(placeholder, callback)
                 local box = Instance.new("TextBox", content)
+                box.Size = UDim2.new(0, w, 0, height)
+                box.Position = UDim2.new(0, col * (w + padding), 0, cursorY)
+                box.PlaceholderText = placeholder or "Digite..."
+                box.Text = ""
+                box.ClearTextOnFocus = false
+
+                box.BackgroundColor3 = win.bg
+                box.BorderColor3 = win.accent
+                box.BorderSizePixel = 3
+                box.TextColor3 = win.text
+                box.TextSize = 10
+
+                box.FocusLost:Connect(function(enter)
+                    if callback then
+                        callback(box.Text, enter)
+                    end
+                end)
+
+                col += 1
+                if col >= 2 then
+                    col = 0
+                    cursorY += height + padding
+                end
+            end
+
+            ------------------------------------------------
+            -- BIG TEXTBOX (2 COLUNAS)
+            ------------------------------------------------
+
+            function section:AddBigTextbox(placeholder, callback)
+                col = 0
+
+                local box = Instance.new("TextBox", content)
+                box.Size = UDim2.new(1,0,0,height)
+                box.Position = UDim2.new(0,0,0,cursorY)
                 box.PlaceholderText = placeholder or "Digite aqui..."
                 box.Text = ""
                 box.ClearTextOnFocus = false
@@ -225,16 +257,14 @@ end
                 box.BorderSizePixel = 3
                 box.TextColor3 = win.text
                 box.TextSize = 10
-                box.TextWrapped = true
-
-                box.Size = UDim2.new(1, -4, 0, 30)
-                box.LayoutOrder = 999
 
                 box.FocusLost:Connect(function(enter)
                     if callback then
                         callback(box.Text, enter)
                     end
                 end)
+
+                cursorY += height + padding
             end
 
             return section
@@ -245,7 +275,7 @@ end
     end
 
     ------------------------------------------------
-    -- NAV < >
+    -- NAV
     ------------------------------------------------
 
     left.MouseButton1Click:Connect(function()
