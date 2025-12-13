@@ -1,12 +1,5 @@
 --[[ 
-    c00lUI Library v3.4
-    Window > Pages > Sections
-
-    Items:
-    - Button (1 coluna)
-    - Label (2 colunas)
-    - SmallTextbox (1 coluna)
-    - BigTextbox (2 colunas)
+    c00lUI
 ]]
 
 local c00lui = {}
