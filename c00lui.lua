@@ -134,7 +134,7 @@ function c00lui:Window(config)
             local leftSide = (page.sectionCount % 2 == 1)
 
             local sec = Instance.new("Frame", pageframe)
-            sec.Size = UDim2.new(0.5,0,1,0)
+            sec.Size = UDim2.new(0.45, 0, 1, 0)  -- Largura da section reduzida para 45%
             sec.Position = leftSide and UDim2.new(0,0,0,0) or UDim2.new(0.5,0,0,0)
             sec.BackgroundColor3 = win.bg
             sec.BorderColor3 = win.accent
@@ -154,6 +154,7 @@ function c00lui:Window(config)
             content.Position = UDim2.new(0,0,0,25)
             content.BackgroundTransparency = 1
 
+            -- layout manual
             local cursorY, col = 0, 0
             local padding, height = 4, 30
 
