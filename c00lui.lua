@@ -291,39 +291,37 @@ function c00lui:SideTab(win, config)
     local mf = win._frame
     if not mf then return warn("window inválida") end
 
-    ------------------------------------------------
-    -- BASE
-    ------------------------------------------------
-
     local sg = mf.Parent
     local basePos = mf.Position
 
     ------------------------------------------------
-    -- SIDE FRAME (COMEÇA ESCONDIDO À DIREITA)
+    -- SIDE FRAME (ATRÁS)
     ------------------------------------------------
 
     local sideFrame = Instance.new("Frame", sg)
     sideFrame.Size = UDim2.new(0,300,0,400)
-    sideFrame.Position = basePos + UDim2.new(0,300,0,0) -- começa fora
+    sideFrame.Position = basePos -- mesma posição da window
     sideFrame.BackgroundColor3 = side.bg
     sideFrame.BorderColor3 = side.accent
     sideFrame.BorderSizePixel = 3
+    sideFrame.ZIndex = 0 -- 🔥 ATRÁS
 
     ------------------------------------------------
-    -- BOTÃO FINO (10px)
+    -- BOTÃO (UM POUCO MAIS GROSSO)
     ------------------------------------------------
 
-    local barWidth = 10
+    local barWidth = 16 -- 👈 ajustado (antes tava fino demais)
 
     local bar = Instance.new("TextButton", sideFrame)
     bar.Size = UDim2.new(0,barWidth,1,0)
-    bar.Position = UDim2.new(1,0,0,0) -- fica pra FORA
+    bar.Position = UDim2.new(1,0,0,0) -- fica pra fora
     bar.Text = ">"
     bar.BackgroundColor3 = side.bg
     bar.BorderColor3 = side.accent
     bar.BorderSizePixel = 3
     bar.TextColor3 = side.text
     bar.TextScaled = true
+    bar.ZIndex = 2
 
     ------------------------------------------------
     -- TITLE
@@ -346,14 +344,20 @@ function c00lui:SideTab(win, config)
     container.BackgroundTransparency = 1
 
     ------------------------------------------------
-    -- TOGGLE (AGORA CORRETO)
+    -- COMEÇA FECHADA DE VERDADE
+    ------------------------------------------------
+
+    sideFrame.Position = basePos + UDim2.new(0,0,0,0) -- atrás da window
+
+    ------------------------------------------------
+    -- TWEEN
     ------------------------------------------------
 
     local function toggleSide()
         side.open = not side.open
 
         local goal = side.open and basePos + UDim2.new(0,300,0,0)
-                              or basePos + UDim2.new(0,0,0,0)
+                              or basePos
 
         TweenService:Create(sideFrame, TweenInfo.new(0.25), {
             Position = goal
@@ -365,15 +369,11 @@ function c00lui:SideTab(win, config)
     bar.MouseButton1Click:Connect(toggleSide)
 
     ------------------------------------------------
-    -- FECHAR JUNTO COM A WINDOW
+    -- FECHAR COM A MAIN
     ------------------------------------------------
 
     mf:GetPropertyChangedSignal("Visible"):Connect(function()
-        if not mf.Visible then
-            sideFrame.Visible = false
-        else
-            sideFrame.Visible = true
-        end
+        sideFrame.Visible = mf.Visible
     end)
 
     ------------------------------------------------
@@ -405,5 +405,4 @@ function c00lui:SideTab(win, config)
 
     return side
 end
-
 return c00lui
