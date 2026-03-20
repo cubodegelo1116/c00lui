@@ -274,4 +274,118 @@ function c00lui:Window(config)
     return win
 end
 
+function c00lui:SideTab(config)
+    config = config or {}
+    local side = {}
+
+    side.title  = config.Title or "SideTab"
+    side.accent = config.AccentColor or Color3.fromRGB(255,0,0)
+    side.bg     = Color3.fromRGB(0,0,0)
+    side.text   = Color3.fromRGB(255,255,255)
+    side.open   = false
+    side.pages  = {}
+    side.current = 1
+
+    local TweenService = game:GetService("TweenService")
+
+    ------------------------------------------------
+    -- GUI
+    ------------------------------------------------
+
+    local sg = game.CoreGui:FindFirstChild("c00lUI")
+
+    local mf = Instance.new("Frame", sg)
+    mf.Size = UDim2.new(0,200,0,400)
+    mf.Position = UDim2.new(0, -200, 0.3, 0) -- começa escondido
+    mf.BackgroundColor3 = side.bg
+    mf.BorderColor3 = side.accent
+    mf.BorderSizePixel = 3
+
+    ------------------------------------------------
+    -- TITLE
+    ------------------------------------------------
+
+    local title = Instance.new("TextLabel", mf)
+    title.Size = UDim2.new(1,0,0,30)
+    title.Text = side.title
+    title.BackgroundColor3 = side.bg
+    title.BorderSizePixel = 0
+    title.TextColor3 = side.text
+    title.TextSize = 14
+
+    ------------------------------------------------
+    -- BOTÃO (>)
+    ------------------------------------------------
+
+    local toggle = Instance.new("TextButton", sg)
+    toggle.Size = UDim2.new(0,25,0,60)
+    toggle.Position = UDim2.new(0,0,0.4,0)
+    toggle.Text = ">"
+    toggle.BackgroundColor3 = side.bg
+    toggle.BorderColor3 = side.accent
+    toggle.BorderSizePixel = 3
+    toggle.TextColor3 = side.text
+
+    ------------------------------------------------
+    -- CONTAINER
+    ------------------------------------------------
+
+    local container = Instance.new("Frame", mf)
+    container.Size = UDim2.new(1,0,1,-30)
+    container.Position = UDim2.new(0,0,0,30)
+    container.BackgroundTransparency = 1
+
+    ------------------------------------------------
+    -- TWEEN OPEN/CLOSE
+    ------------------------------------------------
+
+    local function toggleSide()
+        side.open = not side.open
+
+        local goal = side.open and 0 or -200
+
+        TweenService:Create(
+            mf,
+            TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {Position = UDim2.new(0, goal, 0.3, 0)}
+        ):Play()
+
+        toggle.Text = side.open and "<" or ">"
+    end
+
+    toggle.MouseButton1Click:Connect(toggleSide)
+
+    ------------------------------------------------
+    -- PAGE SYSTEM (igual ao teu)
+    ------------------------------------------------
+
+    function side:AddPage()
+        local pageframe = Instance.new("Frame", container)
+        pageframe.Size = UDim2.new(1,0,1,0)
+        pageframe.BackgroundTransparency = 1
+        pageframe.Visible = (#side.pages == 0)
+
+        local page = {frame = pageframe}
+
+        function page:SAddButton(text, callback)
+            local btn = Instance.new("TextButton", pageframe)
+            btn.Size = UDim2.new(1,0,0,30)
+            btn.Text = text
+            btn.BackgroundColor3 = side.bg
+            btn.BorderColor3 = side.accent
+            btn.BorderSizePixel = 3
+            btn.TextColor3 = side.text
+
+            if callback then
+                btn.MouseButton1Click:Connect(callback)
+            end
+        end
+
+        table.insert(side.pages, page)
+        return page
+    end
+
+    return side
+end
+
 return c00lui
