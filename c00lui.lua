@@ -35,13 +35,14 @@ function c00lui:Window(config)
     sg.ResetOnSpawn = false
 
     local mf = Instance.new("Frame", sg)
-    win._frame = mf
     mf.Size = UDim2.new(0,300,0,400)
     mf.Position = UDim2.new(0,10,0.3,0)
     mf.BackgroundColor3 = win.bg
     mf.BorderColor3 = win.accent
     mf.BorderSizePixel = 3
 
+    win._frame = mf
+    
     local title = Instance.new("TextLabel", mf)
     title.Size = UDim2.new(1,0,0,30)
     title.Text = win.title
