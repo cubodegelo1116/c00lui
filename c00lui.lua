@@ -41,6 +41,8 @@ function c00lui:Window(config)
     mf.BorderColor3 = win.accent
     mf.BorderSizePixel = 3
 
+    win._frame = mf
+    
     local title = Instance.new("TextLabel", mf)
     title.Size = UDim2.new(1,0,0,30)
     title.Text = win.title
