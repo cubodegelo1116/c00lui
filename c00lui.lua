@@ -291,41 +291,46 @@ function c00lui:SideTab(win, config)
     local mf = win._frame
     if not mf then return warn("window inválida") end
 
+    ------------------------------------------------
+    -- BASE
+    ------------------------------------------------
+
+    local sg = mf.Parent
     local basePos = mf.Position
 
     ------------------------------------------------
-    -- SIDE FRAME (ATRÁS DA WINDOW)
+    -- SIDE FRAME (COMEÇA ESCONDIDO À DIREITA)
     ------------------------------------------------
 
-    local sideFrame = Instance.new("Frame", mf.Parent)
+    local sideFrame = Instance.new("Frame", sg)
     sideFrame.Size = UDim2.new(0,300,0,400)
-    sideFrame.Position = basePos
+    sideFrame.Position = basePos + UDim2.new(0,300,0,0) -- começa fora
     sideFrame.BackgroundColor3 = side.bg
     sideFrame.BorderColor3 = side.accent
     sideFrame.BorderSizePixel = 3
-    sideFrame.ZIndex = 0
 
     ------------------------------------------------
-    -- BOTÃO (AGORA CORRETO)
+    -- BOTÃO FINO (10px)
     ------------------------------------------------
+
+    local barWidth = 10
 
     local bar = Instance.new("TextButton", sideFrame)
-    bar.Size = UDim2.new(0,40,1,0) -- altura igual a side
-    bar.Position = UDim2.new(1,-40,0,0) -- colado na direita
+    bar.Size = UDim2.new(0,barWidth,1,0)
+    bar.Position = UDim2.new(1,0,0,0) -- fica pra FORA
     bar.Text = ">"
     bar.BackgroundColor3 = side.bg
     bar.BorderColor3 = side.accent
     bar.BorderSizePixel = 3
     bar.TextColor3 = side.text
     bar.TextScaled = true
-    bar.ZIndex = 5
 
     ------------------------------------------------
     -- TITLE
     ------------------------------------------------
 
     local title = Instance.new("TextLabel", sideFrame)
-    title.Size = UDim2.new(1,-40,0,30)
+    title.Size = UDim2.new(1,-barWidth,0,30)
     title.Text = side.title
     title.BackgroundColor3 = side.bg
     title.BorderSizePixel = 0
@@ -336,21 +341,22 @@ function c00lui:SideTab(win, config)
     ------------------------------------------------
 
     local container = Instance.new("Frame", sideFrame)
-    container.Size = UDim2.new(1,-40,1,-30)
+    container.Size = UDim2.new(1,-barWidth,1,-30)
     container.Position = UDim2.new(0,0,0,30)
     container.BackgroundTransparency = 1
 
     ------------------------------------------------
-    -- TWEEN (MOVE A WINDOW)
+    -- TOGGLE (AGORA CORRETO)
     ------------------------------------------------
 
     local function toggleSide()
         side.open = not side.open
 
-        local offset = side.open and 300 or 0
+        local goal = side.open and basePos + UDim2.new(0,300,0,0)
+                              or basePos + UDim2.new(0,0,0,0)
 
-        TweenService:Create(mf, TweenInfo.new(0.25), {
-            Position = basePos + UDim2.new(0,offset,0,0)
+        TweenService:Create(sideFrame, TweenInfo.new(0.25), {
+            Position = goal
         }):Play()
 
         bar.Text = side.open and "<" or ">"
@@ -359,7 +365,19 @@ function c00lui:SideTab(win, config)
     bar.MouseButton1Click:Connect(toggleSide)
 
     ------------------------------------------------
-    -- PAGE SIMPLES
+    -- FECHAR JUNTO COM A WINDOW
+    ------------------------------------------------
+
+    mf:GetPropertyChangedSignal("Visible"):Connect(function()
+        if not mf.Visible then
+            sideFrame.Visible = false
+        else
+            sideFrame.Visible = true
+        end
+    end)
+
+    ------------------------------------------------
+    -- PAGE
     ------------------------------------------------
 
     function side:AddPage()
