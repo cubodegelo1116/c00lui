@@ -1,10 +1,10 @@
 --[[ 
-    c00lUI v2.0 - COM SIDE TABS ANIMADAS
+    c00lUI v3 - COM SIDE TAB DESLIZÁVEL (TIPO c00gui original)
     
     Agora com:
     - AddPage() - páginas normais (navegação < >)
-    - AddSideTab() - aba lateral que desliza (tween)
-    - Versões S: SButton, SLabel, STextbox, etc
+    - AddSideTab() - aba lateral que desliza com > (abre) e < (fecha)
+    - Elementos S: SButton, SLabel, STextbox, SToggle, SSlider, SDivider, SSpacing
 ]]
 
 local c00lui = {}
@@ -93,22 +93,20 @@ function c00lui:Window(config)
     container.BackgroundTransparency = 1
 
     ------------------------------------------------
-    -- SIDE TAB FRAME (DESLIZÁVEL)
+    -- SIDE TAB (DESLIZÁVEL - COMO c00gui)
     ------------------------------------------------
 
     local sideTabFrame = Instance.new("Frame", mf)
     sideTabFrame.Size = UDim2.new(1,0,1,0)
-    sideTabFrame.Position = UDim2.new(1, 3, 0, 0)  -- Começa fora da tela (direita)
+    sideTabFrame.Position = UDim2.new(1, 3, 0, 0)  -- Começa FORA da tela (direita)
     sideTabFrame.BackgroundColor3 = win.bg
     sideTabFrame.BorderColor3 = win.accent
     sideTabFrame.BorderSizePixel = 3
-    sideTabFrame.ZIndex = 10
+    sideTabFrame.ZIndex = 1
     sideTabFrame.Visible = false
 
     local sideTitle = Instance.new("TextLabel", sideTabFrame)
     sideTitle.Size = UDim2.new(1,0,0,30)
-    sideTitle.Position = UDim2.new(0,0,0,0)
-    sideTitle.Text = "Settings"
     sideTitle.BackgroundColor3 = win.bg
     sideTitle.BorderColor3 = win.accent
     sideTitle.BorderSizePixel = 3
@@ -126,14 +124,14 @@ function c00lui:Window(config)
 
     local sideListLayout = Instance.new("UIListLayout", sideContent)
     sideListLayout.FillDirection = Enum.FillDirection.Vertical
-    sideListLayout.Padding = UDim.new(0, 4)
+    sideListLayout.Padding = UDim.new(0, 3)
 
     sideContent.ChildAdded:Connect(function()
         sideContent.CanvasSize = UDim2.new(0, 0, 0, sideListLayout.AbsoluteContentSize.Y + 10)
     end)
 
     ------------------------------------------------
-    -- TOGGLE
+    -- TOGGLE FECHAR/ABRIR
     ------------------------------------------------
 
     local toggleBtn = Instance.new("TextButton", sg)
@@ -159,35 +157,35 @@ function c00lui:Window(config)
     end)
 
     ------------------------------------------------
-    -- TWEEN PARA SIDE TAB
+    -- FUNÇÃO TWEEN PARA SIDE TAB
     ------------------------------------------------
 
     local function toggleSideTab()
-        if win.hasSideTab then
-            win.sideTabOpen = not win.sideTabOpen
-            sideTabFrame.Visible = true
+        if not win.hasSideTab then return end
+        
+        win.sideTabOpen = not win.sideTabOpen
+        sideTabFrame.Visible = true
 
-            local targetPos = win.sideTabOpen and UDim2.new(0, 0, 0, 0) or UDim2.new(1, 3, 0, 0)
-            
-            local tweenInfo = TweenInfo.new(
-                0.3,
-                Enum.EasingStyle.Quad,
-                Enum.EasingDirection.InOut
-            )
-            
-            local tween = win.TweenService:Create(sideTabFrame, tweenInfo, {Position = targetPos})
-            tween:Play()
+        local targetPos = win.sideTabOpen and UDim2.new(0, 0, 0, 0) or UDim2.new(1, 3, 0, 0)
+        
+        local tweenInfo = TweenInfo.new(
+            0.3,  -- Duração
+            Enum.EasingStyle.Quad,
+            Enum.EasingDirection.InOut
+        )
+        
+        local tween = win.TweenService:Create(sideTabFrame, tweenInfo, {Position = targetPos})
+        tween:Play()
 
-            tween.Completed:Connect(function()
-                if not win.sideTabOpen then
-                    sideTabFrame.Visible = false
-                end
-            end)
-        end
+        tween.Completed:Connect(function()
+            if not win.sideTabOpen then
+                sideTabFrame.Visible = false
+            end
+        end)
     end
 
     ------------------------------------------------
-    -- ADD PAGE (NORMAL)
+    -- ADD PAGE (NORMAL - COMO ANTES)
     ------------------------------------------------
 
     function win:AddPage()
@@ -332,7 +330,7 @@ function c00lui:Window(config)
     end
 
     ------------------------------------------------
-    -- ADD SIDE TAB
+    -- ADD SIDE TAB (NOVO)
     ------------------------------------------------
 
     function win:AddSideTab(title)
@@ -340,9 +338,6 @@ function c00lui:Window(config)
         sideTitle.Text = title or "Settings"
 
         local sideTab = {}
-
-        local cursorY = 0
-        local padding, height = 4, 30
 
         local function styleText(obj)
             obj.TextWrapped = true
@@ -354,9 +349,10 @@ function c00lui:Window(config)
             pad.PaddingRight = UDim.new(0,6)
         end
 
+        ---- SButton ----
         function sideTab:SButton(text, callback)
             local btn = Instance.new("TextButton", sideContent)
-            btn.Size = UDim2.new(1, -10, 0, height)
+            btn.Size = UDim2.new(1, -10, 0, 30)
             btn.Text = text
             btn.BackgroundColor3 = win.bg
             btn.BorderColor3 = win.accent
@@ -372,9 +368,10 @@ function c00lui:Window(config)
             return btn
         end
 
+        ---- SLabel ----
         function sideTab:SLabel(text)
             local lbl = Instance.new("TextLabel", sideContent)
-            lbl.Size = UDim2.new(1, -10, 0, height)
+            lbl.Size = UDim2.new(1, -10, 0, 25)
             lbl.Text = text
             lbl.BackgroundColor3 = win.bg
             lbl.BorderColor3 = win.accent
@@ -386,6 +383,7 @@ function c00lui:Window(config)
             return lbl
         end
 
+        ---- SDivider ----
         function sideTab:SDivider()
             local div = Instance.new("Frame", sideContent)
             div.Size = UDim2.new(1, -10, 0, 2)
@@ -395,9 +393,20 @@ function c00lui:Window(config)
             return div
         end
 
+        ---- SSpacing ----
+        function sideTab:SSpacing(height)
+            local spacer = Instance.new("Frame", sideContent)
+            spacer.Size = UDim2.new(1, -10, 0, height or 10)
+            spacer.BackgroundTransparency = 1
+            spacer.BorderSizePixel = 0
+
+            return spacer
+        end
+
+        ---- STextbox ----
         function sideTab:STextbox(placeholder, callback)
             local box = Instance.new("TextBox", sideContent)
-            box.Size = UDim2.new(1, -10, 0, height)
+            box.Size = UDim2.new(1, -10, 0, 30)
             box.PlaceholderText = placeholder or "Digite..."
             box.Text = ""
             box.ClearTextOnFocus = false
@@ -417,9 +426,10 @@ function c00lui:Window(config)
             return box
         end
 
+        ---- SToggle ----
         function sideTab:SToggle(text, default, callback)
             local container = Instance.new("Frame", sideContent)
-            container.Size = UDim2.new(1, -10, 0, height)
+            container.Size = UDim2.new(1, -10, 0, 30)
             container.BackgroundColor3 = win.bg
             container.BorderColor3 = win.accent
             container.BorderSizePixel = 3
@@ -431,6 +441,7 @@ function c00lui:Window(config)
             lbl.TextColor3 = win.text
             lbl.TextSize = 9
             lbl.TextXAlignment = Enum.TextXAlignment.Left
+            lbl.TextWrapped = true
 
             local toggleBtn = Instance.new("TextButton", container)
             toggleBtn.Size = UDim2.new(0.4, 0, 1, 0)
@@ -453,27 +464,33 @@ function c00lui:Window(config)
                 end
             end)
 
-            return {button = toggleBtn, getValue = function() return toggled end}
+            return {button = toggleBtn, getValue = function() return toggled end, setValue = function(v) 
+                toggled = v
+                toggleBtn.Text = toggled and "ON" or "OFF"
+                toggleBtn.TextColor3 = toggled and win.text or Color3.fromRGB(100,100,100)
+            end}
         end
 
+        ---- SSlider ----
         function sideTab:SSlider(text, min, max, default, callback)
             local container = Instance.new("Frame", sideContent)
-            container.Size = UDim2.new(1, -10, 0, height * 2)
+            container.Size = UDim2.new(1, -10, 0, 55)
             container.BackgroundColor3 = win.bg
             container.BorderColor3 = win.accent
             container.BorderSizePixel = 3
 
             local lbl = Instance.new("TextLabel", container)
-            lbl.Size = UDim2.new(1, 0, 0, height/2)
+            lbl.Size = UDim2.new(1, 0, 0, 20)
             lbl.Text = text .. ": " .. (default or min)
             lbl.BackgroundTransparency = 1
             lbl.TextColor3 = win.text
             lbl.TextSize = 8
             lbl.TextXAlignment = Enum.TextXAlignment.Left
+            lbl.TextWrapped = true
 
             local slider = Instance.new("Frame", container)
             slider.Size = UDim2.new(1, -10, 0, 4)
-            slider.Position = UDim2.new(0, 5, 0, height/2)
+            slider.Position = UDim2.new(0, 5, 0, 25)
             slider.BackgroundColor3 = Color3.fromRGB(50,50,50)
             slider.BorderColor3 = win.accent
             slider.BorderSizePixel = 1
@@ -486,42 +503,44 @@ function c00lui:Window(config)
             local percentage = (value - min) / (max - min)
             fill.Size = UDim2.new(percentage, 0, 1, 0)
 
+            local function updateSlider(input)
+                local relX = math.clamp(input.Position.X - slider.AbsolutePosition.X, 0, slider.AbsoluteSize.X)
+                percentage = relX / slider.AbsoluteSize.X
+                value = math.floor(min + (max - min) * percentage)
+                fill.Size = UDim2.new(percentage, 0, 1, 0)
+                lbl.Text = text .. ": " .. value
+                if callback then callback(value) end
+            end
+
             slider.InputBegan:Connect(function(input, gp)
                 if input.UserInputType == Enum.UserInputType.MouseButton1 and not gp then
-                    local relX = math.clamp(input.Position.X - slider.AbsolutePosition.X, 0, slider.AbsoluteSize.X)
-                    percentage = relX / slider.AbsoluteSize.X
-                    value = math.floor(min + (max - min) * percentage)
-                    fill.Size = UDim2.new(percentage, 0, 1, 0)
-                    lbl.Text = text .. ": " .. value
-                    if callback then callback(value) end
+                    updateSlider(input)
                 end
             end)
 
             slider.InputChanged:Connect(function(input, gp)
-                if input.UserInputType == Enum.UserInputType.MouseMovement then
-                    if game:GetService("UserInputService"):IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then
-                        local relX = math.clamp(input.Position.X - slider.AbsolutePosition.X, 0, slider.AbsoluteSize.X)
-                        percentage = relX / slider.AbsoluteSize.X
-                        value = math.floor(min + (max - min) * percentage)
-                        fill.Size = UDim2.new(percentage, 0, 1, 0)
-                        lbl.Text = text .. ": " .. value
-                        if callback then callback(value) end
-                    end
+                if input.UserInputType == Enum.UserInputType.MouseMovement and game:GetService("UserInputService"):IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then
+                    updateSlider(input)
                 end
             end)
 
-            return {slider = slider, getValue = function() return value end}
+            return {slider = slider, getValue = function() return value end, setValue = function(v)
+                value = math.clamp(v, min, max)
+                percentage = (value - min) / (max - min)
+                fill.Size = UDim2.new(percentage, 0, 1, 0)
+                lbl.Text = text .. ": " .. value
+            end}
         end
 
         return sideTab
     end
 
     ------------------------------------------------
-    -- NAVEGAÇÃO NORMAL
+    -- NAVEGAÇÃO
     ------------------------------------------------
 
     left.MouseButton1Click:Connect(function()
-        if win.hasSideTab and win.sideTabOpen then
+        if win.sideTabOpen then
             toggleSideTab()
         elseif win.current > 1 then
             win.pages[win.current].frame.Visible = false
