@@ -289,14 +289,10 @@ function c00lui:SideTab(win, config)
     local mf = win._frame
     if not mf then return warn("window inválida") end
 
-    ------------------------------------------------
-    -- BASE POSITION
-    ------------------------------------------------
-
     local basePos = mf.Position
 
     ------------------------------------------------
-    -- SIDE FRAME (ATRÁS)
+    -- SIDE FRAME (ATRÁS DA WINDOW)
     ------------------------------------------------
 
     local sideFrame = Instance.new("Frame", mf.Parent)
@@ -305,15 +301,15 @@ function c00lui:SideTab(win, config)
     sideFrame.BackgroundColor3 = side.bg
     sideFrame.BorderColor3 = side.accent
     sideFrame.BorderSizePixel = 3
-    sideFrame.ZIndex = 0 -- ATRÁS
+    sideFrame.ZIndex = 0
 
     ------------------------------------------------
-    -- BARRA (BOTÃO VISÍVEL)
+    -- BOTÃO (AGORA CORRETO)
     ------------------------------------------------
 
     local bar = Instance.new("TextButton", sideFrame)
-    bar.Size = UDim2.new(0,40,1,0)
-    bar.Position = UDim2.new(1,-40,0,0)
+    bar.Size = UDim2.new(0,40,1,0) -- altura igual a side
+    bar.Position = UDim2.new(1,-40,0,0) -- colado na direita
     bar.Text = ">"
     bar.BackgroundColor3 = side.bg
     bar.BorderColor3 = side.accent
@@ -328,12 +324,10 @@ function c00lui:SideTab(win, config)
 
     local title = Instance.new("TextLabel", sideFrame)
     title.Size = UDim2.new(1,-40,0,30)
-    title.Position = UDim2.new(0,0,0,0)
     title.Text = side.title
     title.BackgroundColor3 = side.bg
     title.BorderSizePixel = 0
     title.TextColor3 = side.text
-    title.TextSize = 14
 
     ------------------------------------------------
     -- CONTAINER
@@ -345,7 +339,7 @@ function c00lui:SideTab(win, config)
     container.BackgroundTransparency = 1
 
     ------------------------------------------------
-    -- TWEEN (DESLIZA PRA DIREITA)
+    -- TWEEN (MOVE A WINDOW)
     ------------------------------------------------
 
     local function toggleSide()
