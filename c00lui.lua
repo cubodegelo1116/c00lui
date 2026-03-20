@@ -35,6 +35,7 @@ function c00lui:Window(config)
     sg.ResetOnSpawn = false
 
     local mf = Instance.new("Frame", sg)
+    win._frame = mf
     mf.Size = UDim2.new(0,300,0,400)
     mf.Position = UDim2.new(0,10,0.3,0)
     mf.BackgroundColor3 = win.bg
