@@ -41,8 +41,6 @@ function c00lui:Window(config)
     mf.BorderColor3 = win.accent
     mf.BorderSizePixel = 3
 
-    win._frame = mf
-    
     local title = Instance.new("TextLabel", mf)
     title.Size = UDim2.new(1,0,0,30)
     title.Text = win.title
@@ -285,7 +283,6 @@ function c00lui:SideTab(win, config)
     side.accent = win.accent
     side.text   = win.text
     side.open   = false
-    side.pages  = {}
 
     local TweenService = game:GetService("TweenService")
 
@@ -293,23 +290,45 @@ function c00lui:SideTab(win, config)
     if not mf then return warn("window inválida") end
 
     ------------------------------------------------
-    -- FRAME (ACOPLADO)
+    -- BASE POSITION
     ------------------------------------------------
 
-    local sideFrame = Instance.new("Frame", mf)
-    sideFrame.Size = UDim2.new(0,0,1,0)
-    sideFrame.Position = UDim2.new(1,0,0,0)
+    local basePos = mf.Position
+
+    ------------------------------------------------
+    -- SIDE FRAME (ATRÁS)
+    ------------------------------------------------
+
+    local sideFrame = Instance.new("Frame", mf.Parent)
+    sideFrame.Size = UDim2.new(0,300,0,400)
+    sideFrame.Position = basePos
     sideFrame.BackgroundColor3 = side.bg
     sideFrame.BorderColor3 = side.accent
     sideFrame.BorderSizePixel = 3
-    sideFrame.ClipsDescendants = true
+    sideFrame.ZIndex = 0 -- ATRÁS
+
+    ------------------------------------------------
+    -- BARRA (BOTÃO VISÍVEL)
+    ------------------------------------------------
+
+    local bar = Instance.new("TextButton", sideFrame)
+    bar.Size = UDim2.new(0,40,1,0)
+    bar.Position = UDim2.new(1,-40,0,0)
+    bar.Text = ">"
+    bar.BackgroundColor3 = side.bg
+    bar.BorderColor3 = side.accent
+    bar.BorderSizePixel = 3
+    bar.TextColor3 = side.text
+    bar.TextScaled = true
+    bar.ZIndex = 5
 
     ------------------------------------------------
     -- TITLE
     ------------------------------------------------
 
     local title = Instance.new("TextLabel", sideFrame)
-    title.Size = UDim2.new(1,0,0,30)
+    title.Size = UDim2.new(1,-40,0,30)
+    title.Position = UDim2.new(0,0,0,0)
     title.Text = side.title
     title.BackgroundColor3 = side.bg
     title.BorderSizePixel = 0
@@ -317,77 +336,57 @@ function c00lui:SideTab(win, config)
     title.TextSize = 14
 
     ------------------------------------------------
-    -- BOTÃO (GRUDADO)
-    ------------------------------------------------
-
-    local toggle = Instance.new("TextButton", mf)
-    toggle.Size = UDim2.new(0,20,0,60)
-    toggle.Position = UDim2.new(1,0,0.5,-30)
-    toggle.Text = ">"
-    toggle.BackgroundColor3 = side.bg
-    toggle.BorderColor3 = side.accent
-    toggle.BorderSizePixel = 3
-    toggle.TextColor3 = side.text
-
-    ------------------------------------------------
     -- CONTAINER
     ------------------------------------------------
 
     local container = Instance.new("Frame", sideFrame)
-    container.Size = UDim2.new(1,0,1,-30)
+    container.Size = UDim2.new(1,-40,1,-30)
     container.Position = UDim2.new(0,0,0,30)
     container.BackgroundTransparency = 1
 
     ------------------------------------------------
-    -- TWEEN
+    -- TWEEN (DESLIZA PRA DIREITA)
     ------------------------------------------------
 
     local function toggleSide()
         side.open = not side.open
-        local size = side.open and 200 or 0
 
-        TweenService:Create(sideFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {
-            Size = UDim2.new(0,size,1,0)
+        local offset = side.open and 300 or 0
+
+        TweenService:Create(mf, TweenInfo.new(0.25), {
+            Position = basePos + UDim2.new(0,offset,0,0)
         }):Play()
 
-        toggle.Text = side.open and "<" or ">"
+        bar.Text = side.open and "<" or ">"
     end
 
-    toggle.MouseButton1Click:Connect(toggleSide)
+    bar.MouseButton1Click:Connect(toggleSide)
 
     ------------------------------------------------
-    -- PAGE
+    -- PAGE SIMPLES
     ------------------------------------------------
 
     function side:AddPage()
-        local pageframe = Instance.new("Frame", container)
-        pageframe.Size = UDim2.new(1,0,1,0)
-        pageframe.BackgroundTransparency = 1
-        pageframe.Visible = (#side.pages == 0)
-
         local y = 0
 
-        local page = {}
+        return {
+            SAddButton = function(_, text, callback)
+                local btn = Instance.new("TextButton", container)
+                btn.Size = UDim2.new(1,0,0,30)
+                btn.Position = UDim2.new(0,0,0,y)
+                btn.Text = text
+                btn.BackgroundColor3 = side.bg
+                btn.BorderColor3 = side.accent
+                btn.BorderSizePixel = 3
+                btn.TextColor3 = side.text
 
-        function page:SAddButton(text, callback)
-            local btn = Instance.new("TextButton", pageframe)
-            btn.Size = UDim2.new(1,0,0,30)
-            btn.Position = UDim2.new(0,0,0,y)
-            btn.Text = text
-            btn.BackgroundColor3 = side.bg
-            btn.BorderColor3 = side.accent
-            btn.BorderSizePixel = 3
-            btn.TextColor3 = side.text
+                if callback then
+                    btn.MouseButton1Click:Connect(callback)
+                end
 
-            if callback then
-                btn.MouseButton1Click:Connect(callback)
+                y += 34
             end
-
-            y += 34
-        end
-
-        table.insert(side.pages, page)
-        return page
+        }
     end
 
     return side
