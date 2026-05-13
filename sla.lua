@@ -13,7 +13,8 @@ end
 
 genv.ListenerLoaded = true
 
-local event = Instance.new("BindableEvent")
+local event      = Instance.new("BindableEvent")
+local RunService = game:GetService("RunService")
 genv.ListenerEvent = event
 
 -- ==================== ESTADOS E CORES ====================
@@ -40,7 +41,7 @@ local activeEffects = {
         radius        = 150,
         currentTarget = nil,
         circleGui     = nil,
-        lastCFrame    = nil
+        connection    = nil
     }
 }
 
@@ -105,88 +106,10 @@ local function hasLineOfSight(fromPos, toPos, targetCharacter)
     return result == nil
 end
 
-local function smoothCamera(targetCFrame, speed)
-    local camera = workspace.CurrentCamera
-    camera.CFrame = camera.CFrame:Lerp(targetCFrame, speed)
-end
-
-local function fvLoop()
-    while activeEffects.fv.active do
-        task.wait(0.05)
-
-        local localPlayer = game.Players.LocalPlayer
-        if not localPlayer or not localPlayer.Character then
-            activeEffects.fv.currentTarget = nil
-            continue
-        end
-
-        local localPos = getHeadPosition(localPlayer)
-        if not localPos then
-            activeEffects.fv.currentTarget = nil
-            continue
-        end
-
-        local closestPlayer = nil
-        local closestDist   = activeEffects.fv.radius
-
-        for _, player in pairs(game.Players:GetPlayers()) do
-            if player ~= localPlayer then
-                local headPos = getHeadPosition(player)
-                if headPos then
-                    local dist = (localPos - headPos).Magnitude
-                    if dist <= activeEffects.fv.radius and dist < closestDist then
-                        local canTarget = true
-                        if states.WCK then
-                            canTarget = hasLineOfSight(localPos, headPos, player.Character)
-                        end
-                        if canTarget then
-                            closestDist   = dist
-                            closestPlayer = player
-                        end
-                    end
-                end
-            end
-        end
-
-        if closestPlayer then
-            activeEffects.fv.currentTarget = closestPlayer
-            local targetHead = getHeadPosition(closestPlayer)
-            if targetHead then
-                local camera    = workspace.CurrentCamera
-                local cameraPos = camera.CFrame.Position
-                local targetCF  = CFrame.new(cameraPos, targetHead)
-
-                local last        = activeEffects.fv.lastCFrame
-                local shouldApply = true
-                if last then
-                    local posDiff    = (last.Position - targetCF.Position).Magnitude
-                    local dotProduct = last.LookVector:Dot(targetCF.LookVector)
-                    if posDiff < 0.01 and dotProduct > 0.9999 then
-                        shouldApply = false
-                    end
-                end
-
-                if shouldApply then
-                    activeEffects.fv.lastCFrame = targetCF
-                    if activeEffects.fv.mode == "rg" then
-                        camera.CFrame = targetCF
-                    elseif activeEffects.fv.mode == "lg" then
-                        smoothCamera(targetCF, 0.3)
-                    end
-                end
-            end
-        else
-            activeEffects.fv.currentTarget = nil
-            activeEffects.fv.lastCFrame    = nil
-        end
-    end
-end
-
 local function fvControl(state, mode)
     if state then
         if activeEffects.fv.active then return end
-        activeEffects.fv.active     = true
-        activeEffects.fv.lastCFrame = nil
+        activeEffects.fv.active = true
 
         if mode then activeEffects.fv.mode = mode end
 
@@ -194,11 +117,72 @@ local function fvControl(state, mode)
         print("[FV] ATIVADO - Modo: " .. modeText .. " | Raio: " .. activeEffects.fv.radius)
 
         createCircleGui()
-        task.spawn(fvLoop)
+
+        activeEffects.fv.connection = RunService.RenderStepped:Connect(function()
+            if not activeEffects.fv.active then return end
+
+            local localPlayer = game.Players.LocalPlayer
+            if not localPlayer or not localPlayer.Character then
+                activeEffects.fv.currentTarget = nil
+                return
+            end
+
+            local localPos = getHeadPosition(localPlayer)
+            if not localPos then
+                activeEffects.fv.currentTarget = nil
+                return
+            end
+
+            local closestPlayer = nil
+            local closestDist   = activeEffects.fv.radius
+
+            for _, player in pairs(game.Players:GetPlayers()) do
+                if player ~= localPlayer then
+                    local headPos = getHeadPosition(player)
+                    if headPos then
+                        local dist = (localPos - headPos).Magnitude
+                        if dist <= activeEffects.fv.radius and dist < closestDist then
+                            local canTarget = true
+                            if states.WCK then
+                                canTarget = hasLineOfSight(localPos, headPos, player.Character)
+                            end
+                            if canTarget then
+                                closestDist   = dist
+                                closestPlayer = player
+                            end
+                        end
+                    end
+                end
+            end
+
+            if closestPlayer then
+                activeEffects.fv.currentTarget = closestPlayer
+                local targetHead = getHeadPosition(closestPlayer)
+                if targetHead then
+                    local camera    = workspace.CurrentCamera
+                    local cameraPos = camera.CFrame.Position
+                    local targetCF  = CFrame.new(cameraPos, targetHead)
+
+                    if activeEffects.fv.mode == "rg" then
+                        camera.CFrame = targetCF
+                    elseif activeEffects.fv.mode == "lg" then
+                        camera.CFrame = camera.CFrame:Lerp(targetCF, 0.3)
+                    end
+                end
+            else
+                activeEffects.fv.currentTarget = nil
+            end
+        end)
+
     else
         if not activeEffects.fv.active then return end
-        activeEffects.fv.active     = false
-        activeEffects.fv.lastCFrame = nil
+        activeEffects.fv.active = false
+
+        if activeEffects.fv.connection then
+            activeEffects.fv.connection:Disconnect()
+            activeEffects.fv.connection = nil
+        end
+
         print("[FV] DESATIVADO")
         removeCircleGui()
         activeEffects.fv.currentTarget = nil
