@@ -456,4 +456,4 @@ end)
 
 print("[LISTENER] carregado 🔥")
 print("[COMANDOS] RChams, GChams, BChams, WCK: ON, OFF, TOGGLE")
-print("[COMANDOS] FV: ON, OFF, TOGGLE | FVRadius: [numero] | FVMode: rg / lg")s
+print("[COMANDOS] FV: ON, OFF, TOGGLE | FVRadius: [numero] | FVMode: rg / lg")
