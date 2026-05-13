@@ -100,7 +100,7 @@ end
 -- função principal do FV
 local function fvLoop()
     while activeEffects.fv.active do
-        wait(0.05) -- 20 FPS de verificação
+        wait(0.05)
         
         local localPlayer = game.Players.LocalPlayer
         if not localPlayer or not localPlayer.Character then 
@@ -117,7 +117,6 @@ local function fvLoop()
         local closestPlayer = nil
         local closestDistance = activeEffects.fv.radius
         
-        -- procura o player mais próximo dentro do raio
         for _, player in pairs(game.Players:GetPlayers()) do
             if player ~= localPlayer then
                 local headPos = getHeadPosition(player)
@@ -131,7 +130,6 @@ local function fvLoop()
             end
         end
         
-        -- se encontrou um target
         if closestPlayer then
             activeEffects.fv.currentTarget = closestPlayer
             local targetHead = getHeadPosition(closestPlayer)
@@ -140,10 +138,8 @@ local function fvLoop()
                 local targetCFrame = CFrame.new(targetHead)
                 
                 if activeEffects.fv.mode == "rg" then
-                    -- modo automático (instantâneo)
                     camera.CFrame = targetCFrame
                 elseif activeEffects.fv.mode == "lg" then
-                    -- modo smooth (suave)
                     smoothCamera(targetCFrame, 0.3)
                 end
             end
@@ -161,22 +157,25 @@ local function fvControl(state, mode, radius)
         if activeEffects.fv.active then return end
         activeEffects.fv.active = true
         
-        -- define o modo (rg ou lg)
         if mode then
             activeEffects.fv.mode = mode
         end
         
-        -- define o raio
         if radius and type(radius) == "number" then
             activeEffects.fv.radius = radius
         end
         
-        print("[FV] ATIVADO - Modo: " .. (activeEffects.fv.mode == "rg" and "Automático" : "Smooth") .. " | Raio: " .. activeEffects.fv.radius)
+        -- CORRIGIDO: operador ternário substituído
+        local modeText = ""
+        if activeEffects.fv.mode == "rg" then
+            modeText = "Automático"
+        else
+            modeText = "Smooth"
+        end
+        print("[FV] ATIVADO - Modo: " .. modeText .. " | Raio: " .. activeEffects.fv.radius)
         
-        -- cria o círculo na tela
         createCircleGui()
         
-        -- inicia o loop em uma thread separada
         spawn(function()
             fvLoop()
         end)
@@ -187,7 +186,6 @@ local function fvControl(state, mode, radius)
         
         print("[FV] DESATIVADO - removendo foco visual")
         
-        -- remove o círculo
         removeCircleGui()
         activeEffects.fv.currentTarget = nil
     end
@@ -208,15 +206,15 @@ end
 local function fvSetMode(mode)
     if mode == "rg" or mode == "lg" then
         activeEffects.fv.mode = mode
-        print("[FV] Modo alterado para: " .. (mode == "rg" and "Automático" : "Smooth"))
+        local modeText = (mode == "rg" and "Automático" or "Smooth")
+        print("[FV] Modo alterado para: " .. modeText)
     else
         warn("[FV] Modo inválido:", mode, " (Use 'rg' ou 'lg')")
     end
 end
 
--- ==================== FUNÇÕES DOS CHAMS (já existentes) ====================
+-- ==================== FUNÇÕES DOS CHAMS ====================
 
--- função para criar highlight em um player com cor específica
 local function applyHighlight(player, color, colorName)
     if not player or not player.Character then 
         return 
@@ -496,7 +494,6 @@ event.Event:Connect(function(feature, cmd, extra)
         return
     end
     
-    -- Comandos especiais
     if feature == "FV" then
         if cmd == "ON" then
             featureFunc(true, extra, activeEffects.fv.radius)
@@ -506,16 +503,13 @@ event.Event:Connect(function(feature, cmd, extra)
             featureFunc(not activeEffects.fv.active, extra, activeEffects.fv.radius)
         end
     elseif feature == "FVRadius" then
-        -- comando para mudar o raio: FVRadius, "100"
         local radius = tonumber(cmd)
         if radius then
             featureFunc(radius)
         end
     elseif feature == "FVMode" then
-        -- comando para mudar o modo: FVMode, "rg" ou "lg"
         featureFunc(cmd)
     else
-        -- comandos normais dos chams
         if cmd == "ON" then
             featureFunc(true)
         elseif cmd == "OFF" then
