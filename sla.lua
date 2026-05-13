@@ -81,7 +81,7 @@ local function removeCircleGui()
     end
 end
 
--- ==================== FV LÓGICA ====================
+-- ==================== HELPERS ====================
 
 local function getHeadPosition(player)
     if not player or not player.Character then return nil end
@@ -90,6 +90,21 @@ local function getHeadPosition(player)
     local hrp = player.Character:FindFirstChild("HumanoidRootPart")
     if hrp then return hrp.Position + Vector3.new(0, 2, 0) end
     return nil
+end
+
+-- converte posição 3D pra pixels na tela
+local function getScreenPosition(position)
+    local camera = workspace.CurrentCamera
+    local screenPos, onScreen = camera:WorldToViewportPoint(position)
+    if not onScreen then return nil end
+    return Vector2.new(screenPos.X, screenPos.Y)
+end
+
+-- distância em pixels do centro da tela
+local function getDistanceFromCenter(screenPos)
+    local camera = workspace.CurrentCamera
+    local center = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
+    return (screenPos - center).Magnitude
 end
 
 local function hasLineOfSight(fromPos, toPos, targetCharacter)
@@ -105,6 +120,8 @@ local function hasLineOfSight(fromPos, toPos, targetCharacter)
     local result = workspace:Raycast(fromPos, toPos - fromPos, params)
     return result == nil
 end
+
+-- ==================== FV LÓGICA ====================
 
 local function fvControl(state, mode)
     if state then
@@ -134,21 +151,25 @@ local function fvControl(state, mode)
             end
 
             local closestPlayer = nil
-            local closestDist   = activeEffects.fv.radius
+            local closestDist   = activeEffects.fv.radius -- pixels do centro
 
             for _, player in pairs(game.Players:GetPlayers()) do
                 if player ~= localPlayer then
                     local headPos = getHeadPosition(player)
                     if headPos then
-                        local dist = (localPos - headPos).Magnitude
-                        if dist <= activeEffects.fv.radius and dist < closestDist then
-                            local canTarget = true
-                            if states.WCK then
-                                canTarget = hasLineOfSight(localPos, headPos, player.Character)
-                            end
-                            if canTarget then
-                                closestDist   = dist
-                                closestPlayer = player
+                        -- WorldToViewportPoint retorna onScreen=false se tiver atrás
+                        local screenPos = getScreenPosition(headPos)
+                        if screenPos then
+                            local distFromCenter = getDistanceFromCenter(screenPos)
+                            if distFromCenter <= activeEffects.fv.radius and distFromCenter < closestDist then
+                                local canTarget = true
+                                if states.WCK then
+                                    canTarget = hasLineOfSight(localPos, headPos, player.Character)
+                                end
+                                if canTarget then
+                                    closestDist   = distFromCenter
+                                    closestPlayer = player
+                                end
                             end
                         end
                     end
