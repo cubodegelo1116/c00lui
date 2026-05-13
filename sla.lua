@@ -36,9 +36,10 @@ local colors = {
 }
 
 local activeEffects = {
-    highlights = {},
-    observers  = {},
-    drawings   = {}, -- { [player] = { line=, box={}, hp= } }
+    highlights     = {},
+    observers      = {},
+    drawings       = {},
+    drawConnection = nil,
     fv = {
         active        = false,
         mode          = "rg",
@@ -46,11 +47,10 @@ local activeEffects = {
         currentTarget = nil,
         circleGui     = nil,
         connection    = nil
-    },
-    drawConnection = nil
+    }
 }
 
--- ==================== FV CIRCLE (Drawing) ====================
+-- ==================== FV CIRCLE ====================
 
 local function createCircleGui()
     if activeEffects.fv.circleGui then
@@ -60,15 +60,14 @@ local function createCircleGui()
 
     local camera = workspace.CurrentCamera
     local circle = Drawing.new("Circle")
-    circle.Radius       = activeEffects.fv.radius
-    circle.Thickness    = 2
-    circle.Color        = Color3.fromRGB(255, 50, 50)
-    circle.Filled       = false
-    circle.Visible      = true
-    circle.Transparency = 0.7
-    circle.NumSides     = 64
-    circle.Position     = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
-
+    circle.Radius        = activeEffects.fv.radius
+    circle.Thickness     = 2
+    circle.Color         = Color3.fromRGB(255, 50, 50)
+    circle.Filled        = false
+    circle.Visible       = true
+    circle.Transparency  = 0.7
+    circle.NumSides      = 64
+    circle.Position      = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
     activeEffects.fv.circleGui = circle
 end
 
@@ -123,105 +122,73 @@ local function hasLineOfSight(fromPos, toPos, targetCharacter)
 end
 
 local function getPlayerHealth(player)
-    if not player or not player.Character then return 0, 0 end
+    if not player or not player.Character then return 0, 100 end
     local humanoid = player.Character:FindFirstChild("Humanoid")
-    if not humanoid then return 0, 0 end
+    if not humanoid then return 0, 100 end
     return humanoid.Health, humanoid.MaxHealth
 end
 
-local function getCharacterBounds(player)
+local function getSimpleBounds(player)
     if not player or not player.Character then return nil, nil end
-    local character = player.Character
-    local hrp = character:FindFirstChild("HumanoidRootPart")
+    local hrp = player.Character:FindFirstChild("HumanoidRootPart")
     if not hrp then return nil, nil end
 
     local camera = workspace.CurrentCamera
+    local pos    = hrp.Position
+    local w      = 2.0
 
-    -- pega os 8 cantos do bounding box do personagem
-    local parts = {}
-    for _, part in pairs(character:GetDescendants()) do
-        if part:IsA("BasePart") then
-            table.insert(parts, part)
-        end
-    end
+    local points = {
+        pos + Vector3.new( w,  3.5, 0),
+        pos + Vector3.new(-w,  3.5, 0),
+        pos + Vector3.new( w, -3.5, 0),
+        pos + Vector3.new(-w, -3.5, 0),
+    }
 
-    if #parts == 0 then return nil, nil end
-
-    local minX, minY = math.huge, math.huge
+    local minX, minY =  math.huge,  math.huge
     local maxX, maxY = -math.huge, -math.huge
     local anyOnScreen = false
 
-    for _, part in pairs(parts) do
-        local size = part.Size
-        local cf   = part.CFrame
-
-        local corners = {
-            cf * Vector3.new( size.X/2,  size.Y/2,  size.Z/2),
-            cf * Vector3.new(-size.X/2,  size.Y/2,  size.Z/2),
-            cf * Vector3.new( size.X/2, -size.Y/2,  size.Z/2),
-            cf * Vector3.new(-size.X/2, -size.Y/2,  size.Z/2),
-            cf * Vector3.new( size.X/2,  size.Y/2, -size.Z/2),
-            cf * Vector3.new(-size.X/2,  size.Y/2, -size.Z/2),
-            cf * Vector3.new( size.X/2, -size.Y/2, -size.Z/2),
-            cf * Vector3.new(-size.X/2, -size.Y/2, -size.Z/2),
-        }
-
-        for _, corner in pairs(corners) do
-            local screenPos, onScreen = camera:WorldToViewportPoint(corner)
-            if onScreen then
-                anyOnScreen = true
-                minX = math.min(minX, screenPos.X)
-                minY = math.min(minY, screenPos.Y)
-                maxX = math.max(maxX, screenPos.X)
-                maxY = math.max(maxY, screenPos.Y)
-            end
+    for _, point in pairs(points) do
+        local sp, onScreen = camera:WorldToViewportPoint(point)
+        if onScreen then
+            anyOnScreen = true
+            minX = math.min(minX, sp.X)
+            minY = math.min(minY, sp.Y)
+            maxX = math.max(maxX, sp.X)
+            maxY = math.max(maxY, sp.Y)
         end
     end
 
     if not anyOnScreen then return nil, nil end
-
     return Vector2.new(minX, minY), Vector2.new(maxX, maxY)
 end
 
--- ==================== DRAWINGS POR PLAYER ====================
+-- ==================== DRAWINGS ====================
 
 local function removeDrawingsForPlayer(player)
     if not activeEffects.drawings[player] then return end
     local d = activeEffects.drawings[player]
-
-    if d.line  and d.line.Remove  then d.line:Remove()  end
-    if d.hp    and d.hp.Remove    then d.hp:Remove()    end
-    if d.hpBg  and d.hpBg.Remove  then d.hpBg:Remove()  end
-
-    if d.box then
-        for _, line in pairs(d.box) do
-            if line and line.Remove then line:Remove() end
-        end
-    end
-
+    if d.line  then d.line:Remove()  end
+    if d.hp    then d.hp:Remove()    end
+    if d.hpBg  then d.hpBg:Remove() end
+    for _, l in pairs(d.box) do l:Remove() end
     activeEffects.drawings[player] = nil
 end
 
 local function ensureDrawings(player)
     if not activeEffects.drawings[player] then
-        activeEffects.drawings[player] = {
-            line  = nil,
-            box   = {},
-            hp    = nil,
-            hpBg  = nil
-        }
+        activeEffects.drawings[player] = { line = nil, box = {}, hp = nil, hpBg = nil }
     end
-
     local d = activeEffects.drawings[player]
 
     -- LINE
     if states.Line and not d.line then
-        local line = Drawing.new("Line")
-        line.Thickness   = 1
-        line.Color       = Color3.fromRGB(255, 50, 50)
-        line.Transparency = 0
-        line.Visible     = false
-        d.line = line
+        local l = Drawing.new("Line")
+        l.Thickness    = 1
+        l.Color        = Color3.fromRGB(255, 50, 50)
+        l.Transparency = 0
+        l.Visible      = false
+        d.line = l
     elseif not states.Line and d.line then
         d.line:Remove()
         d.line = nil
@@ -230,19 +197,19 @@ local function ensureDrawings(player)
     -- BOX (4 linhas)
     if states.Box and #d.box == 0 then
         for i = 1, 4 do
-            local line = Drawing.new("Line")
-            line.Thickness    = 1
-            line.Color        = Color3.fromRGB(255, 50, 50)
-            line.Transparency = 0
-            line.Visible      = false
-            table.insert(d.box, line)
+            local l = Drawing.new("Line")
+            l.Thickness    = 1
+            l.Color        = Color3.fromRGB(255, 50, 50)
+            l.Transparency = 0
+            l.Visible      = false
+            table.insert(d.box, l)
         end
     elseif not states.Box and #d.box > 0 then
-        for _, line in pairs(d.box) do line:Remove() end
+        for _, l in pairs(d.box) do l:Remove() end
         d.box = {}
     end
 
-    -- HP (barra: bg + barra colorida)
+    -- HP
     if states.HP and not d.hp then
         local bg = Drawing.new("Line")
         bg.Thickness    = 4
@@ -258,13 +225,14 @@ local function ensureDrawings(player)
         hp.Visible      = false
         d.hp = hp
     elseif not states.HP then
-        if d.hp    then d.hp:Remove()   d.hp   = nil end
-        if d.hpBg  then d.hpBg:Remove() d.hpBg = nil end
+        if d.hp   then d.hp:Remove()   d.hp   = nil end
+        if d.hpBg then d.hpBg:Remove() d.hpBg = nil end
     end
 end
 
 local function updateDrawingsForPlayer(player)
     if not player or player == game.Players.LocalPlayer then return end
+
     if not player.Character then
         if activeEffects.drawings[player] then
             local d = activeEffects.drawings[player]
@@ -280,15 +248,14 @@ local function updateDrawingsForPlayer(player)
     local d = activeEffects.drawings[player]
     if not d then return end
 
-    local camera   = workspace.CurrentCamera
-    local headPos  = getHeadPosition(player)
+    local camera    = workspace.CurrentCamera
+    local headPos   = getHeadPosition(player)
     local screenHead = headPos and getScreenPosition(headPos)
 
     -- LINE
     if d.line then
         if screenHead then
-            local bottom = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y)
-            d.line.From    = bottom
+            d.line.From    = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y)
             d.line.To      = screenHead
             d.line.Visible = true
         else
@@ -296,63 +263,53 @@ local function updateDrawingsForPlayer(player)
         end
     end
 
-    -- BOX
-    if #d.box == 4 then
-        local topLeft, bottomRight = getCharacterBounds(player)
-        if topLeft and bottomRight then
-            local tl = topLeft
-            local br = bottomRight
-            local tr = Vector2.new(br.X, tl.Y)
-            local bl = Vector2.new(tl.X, br.Y)
+    -- BOX + HP (precisam dos bounds)
+    if #d.box == 4 or d.hp then
+        local tl, br = getSimpleBounds(player)
 
-            -- top, bottom, left, right
-            d.box[1].From = tl d.box[1].To = tr d.box[1].Visible = true
-            d.box[2].From = bl d.box[2].To = br d.box[2].Visible = true
-            d.box[3].From = tl d.box[3].To = bl d.box[3].Visible = true
-            d.box[4].From = tr d.box[4].To = br d.box[4].Visible = true
-        else
-            for _, l in pairs(d.box) do l.Visible = false end
+        if #d.box == 4 then
+            if tl and br then
+                local tr = Vector2.new(br.X, tl.Y)
+                local bl = Vector2.new(tl.X, br.Y)
+                d.box[1].From = tl  d.box[1].To = tr  d.box[1].Visible = true
+                d.box[2].From = bl  d.box[2].To = br  d.box[2].Visible = true
+                d.box[3].From = tl  d.box[3].To = bl  d.box[3].Visible = true
+                d.box[4].From = tr  d.box[4].To = br  d.box[4].Visible = true
+            else
+                for _, l in pairs(d.box) do l.Visible = false end
+            end
         end
-    end
 
-    -- HP
-    if d.hp and d.hpBg then
-        local topLeft, bottomRight = getCharacterBounds(player)
-        if topLeft and bottomRight then
-            local health, maxHealth = getPlayerHealth(player)
-            local ratio = maxHealth > 0 and (health / maxHealth) or 0
+        if d.hp and d.hpBg then
+            if tl and br then
+                local health, maxHealth = getPlayerHealth(player)
+                local ratio     = maxHealth > 0 and (health / maxHealth) or 0
+                local barX      = tl.X - 6
+                local barTop    = tl.Y
+                local barBot    = br.Y
+                local barHeight = barBot - barTop
+                local r         = math.floor(255 * (1 - ratio))
+                local g         = math.floor(255 * ratio)
 
-            local barX    = topLeft.X - 6
-            local barTop  = topLeft.Y
-            local barBot  = bottomRight.Y
-            local barHeight = barBot - barTop
+                d.hpBg.From    = Vector2.new(barX, barTop)
+                d.hpBg.To      = Vector2.new(barX, barBot)
+                d.hpBg.Visible = true
 
-            -- bg (barra inteira cinza)
-            d.hpBg.From    = Vector2.new(barX, barTop)
-            d.hpBg.To      = Vector2.new(barX, barBot)
-            d.hpBg.Visible = true
-
-            -- hp colorido por porcentagem
-            local r = math.floor(255 * (1 - ratio))
-            local g = math.floor(255 * ratio)
-            d.hp.Color   = Color3.fromRGB(r, g, 0)
-            d.hp.From    = Vector2.new(barX, barBot)
-            d.hp.To      = Vector2.new(barX, barBot - barHeight * ratio)
-            d.hp.Visible = true
-        else
-            d.hp.Visible   = false
-            d.hpBg.Visible = false
+                d.hp.Color   = Color3.fromRGB(r, g, 0)
+                d.hp.From    = Vector2.new(barX, barBot)
+                d.hp.To      = Vector2.new(barX, barBot - barHeight * ratio)
+                d.hp.Visible = true
+            else
+                d.hp.Visible   = false
+                d.hpBg.Visible = false
+            end
         end
     end
 end
 
--- loop RenderStepped pra atualizar drawings de todos os players
 local function startDrawLoop()
     if activeEffects.drawConnection then return end
-
     activeEffects.drawConnection = RunService.RenderStepped:Connect(function()
-        if not states.Line and not states.Box and not states.HP then return end
-
         for _, player in pairs(game.Players:GetPlayers()) do
             if player ~= game.Players.LocalPlayer then
                 updateDrawingsForPlayer(player)
@@ -369,206 +326,46 @@ local function stopDrawLoopIfUnused()
     end
 end
 
--- ==================== CONTROLES LINE / BOX / HP ====================
+-- ==================== OBSERVER ====================
 
-local function lineControl(state)
-    if state then
-        if states.Line then return end
-        states.Line = true
-        print("[LINE] ATIVADO")
-        startDrawLoop()
-        for _, p in pairs(game.Players:GetPlayers()) do
-            if p ~= game.Players.LocalPlayer then
-                setupCharacterObserver(p)
-                ensureDrawings(p)
-            end
-        end
-    else
-        if not states.Line then return end
-        states.Line = false
-        print("[LINE] DESATIVADO")
-        for _, p in pairs(game.Players:GetPlayers()) do
-            if activeEffects.drawings[p] and activeEffects.drawings[p].line then
-                activeEffects.drawings[p].line:Remove()
-                activeEffects.drawings[p].line = nil
-            end
-        end
-        stopDrawLoopIfUnused()
-    end
+local function reapplyHighlightsToPlayer(player)
+    if not player or player == game.Players.LocalPlayer then return end
+    if states.RChams then applyHighlight(player, colors.R, "R") end
+    if states.GChams then applyHighlight(player, colors.G, "G") end
+    if states.BChams then applyHighlight(player, colors.B, "B") end
 end
 
-local function boxControl(state)
-    if state then
-        if states.Box then return end
-        states.Box = true
-        print("[BOX] ATIVADO")
-        startDrawLoop()
-        for _, p in pairs(game.Players:GetPlayers()) do
-            if p ~= game.Players.LocalPlayer then
-                setupCharacterObserver(p)
-                ensureDrawings(p)
-            end
-        end
-    else
-        if not states.Box then return end
-        states.Box = false
-        print("[BOX] DESATIVADO")
-        for _, p in pairs(game.Players:GetPlayers()) do
-            if activeEffects.drawings[p] then
-                for _, l in pairs(activeEffects.drawings[p].box) do l:Remove() end
-                activeEffects.drawings[p].box = {}
-            end
-        end
-        stopDrawLoopIfUnused()
-    end
-end
+local function setupCharacterObserver(player)
+    if not player or player == game.Players.LocalPlayer then return end
+    if activeEffects.observers[player] then return end
 
-local function hpControl(state)
-    if state then
-        if states.HP then return end
-        states.HP = true
-        print("[HP] ATIVADO")
-        startDrawLoop()
-        for _, p in pairs(game.Players:GetPlayers()) do
-            if p ~= game.Players.LocalPlayer then
-                setupCharacterObserver(p)
-                ensureDrawings(p)
-            end
-        end
-    else
-        if not states.HP then return end
-        states.HP = false
-        print("[HP] DESATIVADO")
-        for _, p in pairs(game.Players:GetPlayers()) do
-            if activeEffects.drawings[p] then
-                local d = activeEffects.drawings[p]
-                if d.hp    then d.hp:Remove()   d.hp   = nil end
-                if d.hpBg  then d.hpBg:Remove() d.hpBg = nil end
-            end
-        end
-        stopDrawLoopIfUnused()
-    end
-end
-
--- ==================== FV LÓGICA ====================
-
-local function fvControl(state, mode)
-    if state then
-        if activeEffects.fv.active then return end
-        activeEffects.fv.active = true
-
-        if mode then activeEffects.fv.mode = mode end
-
-        local modeText = activeEffects.fv.mode == "rg" and "Automático" or "Smooth"
-        print("[FV] ATIVADO - Modo: " .. modeText .. " | Raio: " .. activeEffects.fv.radius)
-
-        createCircleGui()
-
-        activeEffects.fv.connection = RunService.RenderStepped:Connect(function()
-            if not activeEffects.fv.active then return end
-
-            local localPlayer = game.Players.LocalPlayer
-            if not localPlayer or not localPlayer.Character then
-                activeEffects.fv.currentTarget = nil
-                return
-            end
-
-            local localPos = getHeadPosition(localPlayer)
-            if not localPos then
-                activeEffects.fv.currentTarget = nil
-                return
-            end
-
-            local closestPlayer = nil
-            local closestDist   = activeEffects.fv.radius
-
-            for _, player in pairs(game.Players:GetPlayers()) do
-                if player ~= localPlayer then
-                    local headPos = getHeadPosition(player)
-                    if headPos then
-                        local screenPos = getScreenPosition(headPos)
-                        if screenPos then
-                            local distFromCenter = getDistanceFromCenter(screenPos)
-                            if distFromCenter <= activeEffects.fv.radius and distFromCenter < closestDist then
-                                local canTarget = true
-                                if states.WCK then
-                                    canTarget = hasLineOfSight(localPos, headPos, player.Character)
-                                end
-                                if canTarget then
-                                    closestDist   = distFromCenter
-                                    closestPlayer = player
-                                end
-                            end
-                        end
+    activeEffects.observers[player] = {
+        added = player.CharacterAdded:Connect(function(character)
+            task.wait(0.5)
+            if player and player.Character == character then
+                local humanoid = character:FindFirstChild("Humanoid")
+                if humanoid and humanoid.Health > 0 then
+                    reapplyHighlightsToPlayer(player)
+                    if states.Line or states.Box or states.HP then
+                        removeDrawingsForPlayer(player)
+                        ensureDrawings(player)
                     end
                 end
             end
-
-            if closestPlayer then
-                activeEffects.fv.currentTarget = closestPlayer
-                local targetHead = getHeadPosition(closestPlayer)
-                if targetHead then
-                    local camera    = workspace.CurrentCamera
-                    local cameraPos = camera.CFrame.Position
-                    local targetCF  = CFrame.new(cameraPos, targetHead)
-
-                    if activeEffects.fv.mode == "rg" then
-                        camera.CFrame = targetCF
-                    elseif activeEffects.fv.mode == "lg" then
-                        camera.CFrame = camera.CFrame:Lerp(targetCF, 0.3)
-                    end
-                end
-            else
-                activeEffects.fv.currentTarget = nil
+        end),
+        removing = player.CharacterRemoving:Connect(function()
+            if states.RChams then removeHighlights(player, "R") end
+            if states.GChams then removeHighlights(player, "G") end
+            if states.BChams then removeHighlights(player, "B") end
+            if activeEffects.drawings[player] then
+                local d = activeEffects.drawings[player]
+                if d.line  then d.line.Visible  = false end
+                if d.hp    then d.hp.Visible    = false end
+                if d.hpBg  then d.hpBg.Visible  = false end
+                for _, l in pairs(d.box) do l.Visible = false end
             end
         end)
-
-    else
-        if not activeEffects.fv.active then return end
-        activeEffects.fv.active = false
-
-        if activeEffects.fv.connection then
-            activeEffects.fv.connection:Disconnect()
-            activeEffects.fv.connection = nil
-        end
-
-        print("[FV] DESATIVADO")
-        removeCircleGui()
-        activeEffects.fv.currentTarget = nil
-    end
-end
-
-local function fvSetRadius(radius)
-    if type(radius) == "number" and radius > 0 then
-        activeEffects.fv.radius = radius
-        updateCircleSize(radius)
-        print("[FV] Raio: " .. radius)
-    else
-        warn("[FV] Raio inválido:", radius)
-    end
-end
-
-local function fvSetMode(mode)
-    if mode == "rg" or mode == "lg" then
-        activeEffects.fv.mode = mode
-        print("[FV] Modo: " .. (mode == "rg" and "Automático" or "Smooth"))
-    else
-        warn("[FV] Modo inválido:", mode)
-    end
-end
-
--- ==================== WCK ====================
-
-local function wckControl(state)
-    if state then
-        if states.WCK then return end
-        states.WCK = true
-        print("[WCK] ATIVADO")
-    else
-        if not states.WCK then return end
-        states.WCK = false
-        print("[WCK] DESATIVADO")
-    end
+    }
 end
 
 -- ==================== CHAMS ====================
@@ -638,48 +435,6 @@ local function removeFromAllPlayers(colorName)
     end
 end
 
-local function reapplyHighlightsToPlayer(player)
-    if not player or player == game.Players.LocalPlayer then return end
-    if states.RChams then applyHighlight(player, colors.R, "R") end
-    if states.GChams then applyHighlight(player, colors.G, "G") end
-    if states.BChams then applyHighlight(player, colors.B, "B") end
-end
-
-function setupCharacterObserver(player)
-    if not player or player == game.Players.LocalPlayer then return end
-    if activeEffects.observers[player] then return end
-
-    activeEffects.observers[player] = {
-        added = player.CharacterAdded:Connect(function(character)
-            task.wait(0.5)
-            if player and player.Character == character then
-                local humanoid = character:FindFirstChild("Humanoid")
-                if humanoid and humanoid.Health > 0 then
-                    reapplyHighlightsToPlayer(player)
-                    -- reaplica drawings
-                    if states.Line or states.Box or states.HP then
-                        removeDrawingsForPlayer(player)
-                        ensureDrawings(player)
-                    end
-                end
-            end
-        end),
-        removing = player.CharacterRemoving:Connect(function()
-            if states.RChams then removeHighlights(player, "R") end
-            if states.GChams then removeHighlights(player, "G") end
-            if states.BChams then removeHighlights(player, "B") end
-            -- esconde drawings ao morrer
-            if activeEffects.drawings[player] then
-                local d = activeEffects.drawings[player]
-                if d.line  then d.line.Visible  = false end
-                if d.hp    then d.hp.Visible    = false end
-                if d.hpBg  then d.hpBg.Visible  = false end
-                for _, l in pairs(d.box) do l.Visible = false end
-            end
-        end)
-    }
-end
-
 local function rChamsControl(state)
     if state then
         if states.RChams then return end
@@ -730,6 +485,203 @@ local function bChamsControl(state)
         removeFromAllPlayers("B")
     end
 end
+
+-- ==================== LINE / BOX / HP ====================
+
+local function lineControl(state)
+    if state then
+        if states.Line then return end
+        states.Line = true
+        print("[LINE] ATIVADO")
+        for _, p in pairs(game.Players:GetPlayers()) do
+            if p ~= game.Players.LocalPlayer then
+                setupCharacterObserver(p)
+                ensureDrawings(p)
+            end
+        end
+        startDrawLoop()
+    else
+        if not states.Line then return end
+        states.Line = false
+        print("[LINE] DESATIVADO")
+        for _, p in pairs(game.Players:GetPlayers()) do
+            if activeEffects.drawings[p] and activeEffects.drawings[p].line then
+                activeEffects.drawings[p].line:Remove()
+                activeEffects.drawings[p].line = nil
+            end
+        end
+        stopDrawLoopIfUnused()
+    end
+end
+
+local function boxControl(state)
+    if state then
+        if states.Box then return end
+        states.Box = true
+        print("[BOX] ATIVADO")
+        for _, p in pairs(game.Players:GetPlayers()) do
+            if p ~= game.Players.LocalPlayer then
+                setupCharacterObserver(p)
+                ensureDrawings(p)
+            end
+        end
+        startDrawLoop()
+    else
+        if not states.Box then return end
+        states.Box = false
+        print("[BOX] DESATIVADO")
+        for _, p in pairs(game.Players:GetPlayers()) do
+            if activeEffects.drawings[p] then
+                for _, l in pairs(activeEffects.drawings[p].box) do l:Remove() end
+                activeEffects.drawings[p].box = {}
+            end
+        end
+        stopDrawLoopIfUnused()
+    end
+end
+
+local function hpControl(state)
+    if state then
+        if states.HP then return end
+        states.HP = true
+        print("[HP] ATIVADO")
+        for _, p in pairs(game.Players:GetPlayers()) do
+            if p ~= game.Players.LocalPlayer then
+                setupCharacterObserver(p)
+                ensureDrawings(p)
+            end
+        end
+        startDrawLoop()
+    else
+        if not states.HP then return end
+        states.HP = false
+        print("[HP] DESATIVADO")
+        for _, p in pairs(game.Players:GetPlayers()) do
+            if activeEffects.drawings[p] then
+                local d = activeEffects.drawings[p]
+                if d.hp   then d.hp:Remove()   d.hp   = nil end
+                if d.hpBg then d.hpBg:Remove() d.hpBg = nil end
+            end
+        end
+        stopDrawLoopIfUnused()
+    end
+end
+
+-- ==================== WCK ====================
+
+local function wckControl(state)
+    if state then
+        if states.WCK then return end
+        states.WCK = true
+        print("[WCK] ATIVADO")
+    else
+        if not states.WCK then return end
+        states.WCK = false
+        print("[WCK] DESATIVADO")
+    end
+end
+
+-- ==================== FV ====================
+
+local function fvControl(state, mode)
+    if state then
+        if activeEffects.fv.active then return end
+        activeEffects.fv.active = true
+        if mode then activeEffects.fv.mode = mode end
+
+        local modeText = activeEffects.fv.mode == "rg" and "Automático" or "Smooth"
+        print("[FV] ATIVADO - Modo: " .. modeText .. " | Raio: " .. activeEffects.fv.radius)
+        createCircleGui()
+
+        activeEffects.fv.connection = RunService.RenderStepped:Connect(function()
+            if not activeEffects.fv.active then return end
+
+            local localPlayer = game.Players.LocalPlayer
+            if not localPlayer or not localPlayer.Character then
+                activeEffects.fv.currentTarget = nil
+                return
+            end
+
+            local localPos = getHeadPosition(localPlayer)
+            if not localPos then
+                activeEffects.fv.currentTarget = nil
+                return
+            end
+
+            local closestPlayer = nil
+            local closestDist   = activeEffects.fv.radius
+
+            for _, player in pairs(game.Players:GetPlayers()) do
+                if player ~= localPlayer then
+                    local headPos = getHeadPosition(player)
+                    if headPos then
+                        local screenPos = getScreenPosition(headPos)
+                        if screenPos then
+                            local distFromCenter = getDistanceFromCenter(screenPos)
+                            if distFromCenter <= activeEffects.fv.radius and distFromCenter < closestDist then
+                                local canTarget = true
+                                if states.WCK then
+                                    canTarget = hasLineOfSight(localPos, headPos, player.Character)
+                                end
+                                if canTarget then
+                                    closestDist   = distFromCenter
+                                    closestPlayer = player
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+
+            if closestPlayer then
+                activeEffects.fv.currentTarget = closestPlayer
+                local targetHead = getHeadPosition(closestPlayer)
+                if targetHead then
+                    local camera   = workspace.CurrentCamera
+                    local targetCF = CFrame.new(camera.CFrame.Position, targetHead)
+                    if activeEffects.fv.mode == "rg" then
+                        camera.CFrame = targetCF
+                    else
+                        camera.CFrame = camera.CFrame:Lerp(targetCF, 0.3)
+                    end
+                end
+            else
+                activeEffects.fv.currentTarget = nil
+            end
+        end)
+    else
+        if not activeEffects.fv.active then return end
+        activeEffects.fv.active = false
+        if activeEffects.fv.connection then
+            activeEffects.fv.connection:Disconnect()
+            activeEffects.fv.connection = nil
+        end
+        print("[FV] DESATIVADO")
+        removeCircleGui()
+        activeEffects.fv.currentTarget = nil
+    end
+end
+
+local function fvSetRadius(radius)
+    if type(radius) == "number" and radius > 0 then
+        activeEffects.fv.radius = radius
+        updateCircleSize(radius)
+        print("[FV] Raio: " .. radius)
+    else
+        warn("[FV] Raio inválido:", radius)
+    end
+end
+
+local function fvSetMode(mode)
+    if mode == "rg" or mode == "lg" then
+        activeEffects.fv.mode = mode
+        print("[FV] Modo: " .. (mode == "rg" and "Automático" or "Smooth"))
+    else
+        warn("[FV] Modo inválido:", mode)
+    end
+end
+
+-- ==================== PLAYER ADDED/REMOVING ====================
 
 game.Players.PlayerAdded:Connect(function(player)
     if player == game.Players.LocalPlayer then return end
