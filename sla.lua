@@ -35,13 +35,13 @@ local activeEffects = {
     highlights = {},
     observers  = {},
     fv = {
-        active       = false,
-        mode         = "rg",
-        radius       = 150,
+        active        = false,
+        mode          = "rg",
+        radius        = 150,
         currentTarget = nil,
-        circleGui    = nil,
-        circleFrame  = nil,
-        lastCFrame   = nil  -- evita flicker: só aplica se mudou
+        circleGui     = nil,
+        circleFrame   = nil,
+        lastCFrame    = nil
     }
 }
 
@@ -51,57 +51,45 @@ local function createCircleGui()
     local player = game.Players.LocalPlayer
     if not player then return end
 
-    -- remove anterior se existir
-    local old = player:FindFirstChild("PlayerGui") and player.PlayerGui:FindFirstChild("FVCircleGui")
+    local old = player.PlayerGui:FindFirstChild("FVCircleGui")
     if old then old:Destroy() end
 
     local screenGui = Instance.new("ScreenGui")
     screenGui.Name = "FVCircleGui"
     screenGui.ResetOnSpawn = false
-    screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     screenGui.Parent = player:WaitForChild("PlayerGui")
 
     local r = activeEffects.fv.radius
 
-    -- borda (frame maior, cor sólida)
-    local border = Instance.new("Frame")
-    border.Name = "Border"
-    border.Size = UDim2.new(0, r, 0, r)
-    border.Position = UDim2.new(0.5, -r/2, 0.5, -r/2)
-    border.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
-    border.BackgroundTransparency = 0
-    border.BorderSizePixel = 0
-    border.Parent = screenGui
+    local circle = Instance.new("Frame")
+    circle.Name = "Circle"
+    circle.Size = UDim2.new(0, r, 0, r)
+    circle.Position = UDim2.new(0.5, -r/2, 0.5, -r/2)
+    circle.BackgroundTransparency = 1
+    circle.BorderSizePixel = 0
+    circle.Parent = screenGui
 
-    local borderCorner = Instance.new("UICorner")
-    borderCorner.CornerRadius = UDim.new(1, 0)
-    borderCorner.Parent = border
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(1, 0)
+    corner.Parent = circle
 
-    -- interior transparente (faz parecer anel)
-    local inner = Instance.new("Frame")
-    inner.Name = "Inner"
-    inner.Size = UDim2.new(1, -4, 1, -4)
-    inner.Position = UDim2.new(0, 2, 0, 2)
-    inner.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-    inner.BackgroundTransparency = 1  -- totalmente transparente = sem preenchimento
-    inner.BorderSizePixel = 0
-    inner.Parent = border
-
-    local innerCorner = Instance.new("UICorner")
-    innerCorner.CornerRadius = UDim.new(1, 0)
-    innerCorner.Parent = inner
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Color3.fromRGB(255, 50, 50)
+    stroke.Thickness = 2
+    stroke.Transparency = 0
+    stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    stroke.Parent = circle
 
     activeEffects.fv.circleGui   = screenGui
-    activeEffects.fv.circleFrame = border
+    activeEffects.fv.circleFrame = circle
 end
 
 local function updateCircleSize(radius)
     activeEffects.fv.radius = radius
-    local border = activeEffects.fv.circleFrame
-    if not border then return end
-    local r = radius
-    border.Size     = UDim2.new(0, r, 0, r)
-    border.Position = UDim2.new(0.5, -r/2, 0.5, -r/2)
+    local circle = activeEffects.fv.circleFrame
+    if not circle then return end
+    circle.Size     = UDim2.new(0, radius, 0, radius)
+    circle.Position = UDim2.new(0.5, -radius/2, 0.5, -radius/2)
 end
 
 local function removeCircleGui()
@@ -123,22 +111,17 @@ local function getHeadPosition(player)
     return nil
 end
 
--- WCK: retorna true se há linha de visão (sem parede)
 local function hasLineOfSight(fromPos, toPos, targetCharacter)
-    local rayOrigin    = fromPos
-    local rayDirection = (toPos - fromPos)
-    local raycastParams = RaycastParams.new()
-    raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+    local params = RaycastParams.new()
+    params.FilterType = Enum.RaycastFilterType.Exclude
 
-    -- exclui o próprio personagem local e o alvo
-    local excludeList = {}
+    local exclude = {}
     local localChar = game.Players.LocalPlayer.Character
-    if localChar then table.insert(excludeList, localChar) end
-    if targetCharacter then table.insert(excludeList, targetCharacter) end
-    raycastParams.FilterDescendantsInstances = excludeList
+    if localChar then table.insert(exclude, localChar) end
+    if targetCharacter then table.insert(exclude, targetCharacter) end
+    params.FilterDescendantsInstances = exclude
 
-    local result = workspace:Raycast(rayOrigin, rayDirection, raycastParams)
-    -- se não bateu em nada = linha livre
+    local result = workspace:Raycast(fromPos, toPos - fromPos, params)
     return result == nil
 end
 
@@ -163,8 +146,8 @@ local function fvLoop()
             continue
         end
 
-        local closestPlayer  = nil
-        local closestDist    = activeEffects.fv.radius
+        local closestPlayer = nil
+        local closestDist   = activeEffects.fv.radius
 
         for _, player in pairs(game.Players:GetPlayers()) do
             if player ~= localPlayer then
@@ -172,7 +155,6 @@ local function fvLoop()
                 if headPos then
                     local dist = (localPos - headPos).Magnitude
                     if dist <= activeEffects.fv.radius and dist < closestDist then
-                        -- WCK: se ativado, só mira se tiver linha de visão
                         local canTarget = true
                         if states.WCK then
                             canTarget = hasLineOfSight(localPos, headPos, player.Character)
@@ -190,17 +172,15 @@ local function fvLoop()
             activeEffects.fv.currentTarget = closestPlayer
             local targetHead = getHeadPosition(closestPlayer)
             if targetHead then
-                local camera     = workspace.CurrentCamera
-                local cameraPos  = camera.CFrame.Position
-                local targetCF   = CFrame.new(cameraPos, targetHead)
+                local camera    = workspace.CurrentCamera
+                local cameraPos = camera.CFrame.Position
+                local targetCF  = CFrame.new(cameraPos, targetHead)
 
-                -- ANTI-FLICKER: só aplica se o CFrame mudou de forma relevante
-                local last = activeEffects.fv.lastCFrame
+                local last       = activeEffects.fv.lastCFrame
                 local shouldApply = true
                 if last then
-                    local posDiff = (last.Position - targetCF.Position).Magnitude
+                    local posDiff    = (last.Position - targetCF.Position).Magnitude
                     local dotProduct = last.LookVector:Dot(targetCF.LookVector)
-                    -- só atualiza se moveu mais de 0.01 ou virou mais de ~0.5 grau
                     if posDiff < 0.01 and dotProduct > 0.9999 then
                         shouldApply = false
                     end
@@ -225,7 +205,7 @@ end
 local function fvControl(state, mode)
     if state then
         if activeEffects.fv.active then return end
-        activeEffects.fv.active    = true
+        activeEffects.fv.active     = true
         activeEffects.fv.lastCFrame = nil
 
         if mode then activeEffects.fv.mode = mode end
