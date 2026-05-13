@@ -40,63 +40,43 @@ local activeEffects = {
         radius        = 150,
         currentTarget = nil,
         circleGui     = nil,
-        circleFrame   = nil,
         lastCFrame    = nil
     }
 }
 
--- ==================== FV CIRCLE ====================
+-- ==================== FV CIRCLE (Drawing) ====================
 
 local function createCircleGui()
-    local player = game.Players.LocalPlayer
-    if not player then return end
+    if activeEffects.fv.circleGui then
+        activeEffects.fv.circleGui:Remove()
+        activeEffects.fv.circleGui = nil
+    end
 
-    local old = player.PlayerGui:FindFirstChild("FVCircleGui")
-    if old then old:Destroy() end
+    local camera = workspace.CurrentCamera
+    local circle = Drawing.new("Circle")
+    circle.Radius       = activeEffects.fv.radius
+    circle.Thickness    = 2
+    circle.Color        = Color3.fromRGB(255, 50, 50)
+    circle.Filled       = false
+    circle.Visible      = true
+    circle.Transparency = 0.7
+    circle.NumSides     = 64
+    circle.Position     = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
 
-    local screenGui = Instance.new("ScreenGui")
-    screenGui.Name = "FVCircleGui"
-    screenGui.ResetOnSpawn = false
-    screenGui.Parent = player:WaitForChild("PlayerGui")
-
-    local r = activeEffects.fv.radius
-
-    local circle = Instance.new("Frame")
-    circle.Name = "Circle"
-    circle.Size = UDim2.new(0, r, 0, r)
-    circle.Position = UDim2.new(0.5, -r/2, 0.5, -r/2)
-    circle.BackgroundTransparency = 1
-    circle.BorderSizePixel = 0
-    circle.Parent = screenGui
-
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(1, 0)
-    corner.Parent = circle
-
-    local stroke = Instance.new("UIStroke")
-    stroke.Color = Color3.fromRGB(255, 50, 50)
-    stroke.Thickness = 2
-    stroke.Transparency = 0
-    stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-    stroke.Parent = circle
-
-    activeEffects.fv.circleGui   = screenGui
-    activeEffects.fv.circleFrame = circle
+    activeEffects.fv.circleGui = circle
 end
 
 local function updateCircleSize(radius)
     activeEffects.fv.radius = radius
-    local circle = activeEffects.fv.circleFrame
-    if not circle then return end
-    circle.Size     = UDim2.new(0, radius, 0, radius)
-    circle.Position = UDim2.new(0.5, -radius/2, 0.5, -radius/2)
+    if activeEffects.fv.circleGui then
+        activeEffects.fv.circleGui.Radius = radius
+    end
 end
 
 local function removeCircleGui()
     if activeEffects.fv.circleGui then
-        activeEffects.fv.circleGui:Destroy()
-        activeEffects.fv.circleGui   = nil
-        activeEffects.fv.circleFrame = nil
+        activeEffects.fv.circleGui:Remove()
+        activeEffects.fv.circleGui = nil
     end
 end
 
@@ -176,7 +156,7 @@ local function fvLoop()
                 local cameraPos = camera.CFrame.Position
                 local targetCF  = CFrame.new(cameraPos, targetHead)
 
-                local last       = activeEffects.fv.lastCFrame
+                local last        = activeEffects.fv.lastCFrame
                 local shouldApply = true
                 if last then
                     local posDiff    = (last.Position - targetCF.Position).Magnitude
@@ -476,4 +456,4 @@ end)
 
 print("[LISTENER] carregado 🔥")
 print("[COMANDOS] RChams, GChams, BChams, WCK: ON, OFF, TOGGLE")
-print("[COMANDOS] FV: ON, OFF, TOGGLE | FVRadius: [numero] | FVMode: rg / lg")
+print("[COMANDOS] FV: ON, OFF, TOGGLE | FVRadius: [numero] | FVMode: rg / lg")s
