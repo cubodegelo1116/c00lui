@@ -14,8 +14,207 @@ getgenv().ListenerEvent = event
 -- armazenamento dos efeitos ativos
 local activeEffects = {
     highlights = {},
-    observers = {}
+    observers = {},
+    fv = {
+        active = false,
+        mode = "rg", -- rg = automatico (instantaneo), lg = smooth
+        radius = 100, -- raio padrão
+        currentTarget = nil,
+        connection = nil,
+        circleGui = nil,
+        circleFrame = nil
+    }
 }
+
+-- ==================== FUNÇÕES DO FV ====================
+
+-- criar círculo na tela
+local function createCircleGui()
+    local player = game.Players.LocalPlayer
+    if not player then return end
+    
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "FVCircleGui"
+    screenGui.ResetOnSpawn = false
+    screenGui.Parent = player:WaitForChild("PlayerGui")
+    
+    local circle = Instance.new("Frame")
+    circle.Name = "Circle"
+    circle.Size = UDim2.new(0, activeEffects.fv.radius, 0, activeEffects.fv.radius)
+    circle.Position = UDim2.new(0.5, -activeEffects.fv.radius/2, 0.5, -activeEffects.fv.radius/2)
+    circle.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+    circle.BackgroundTransparency = 0.7
+    circle.BorderSizePixel = 2
+    circle.BorderColor3 = Color3.fromRGB(255, 255, 255)
+    circle.Parent = screenGui
+    
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(1, 0)
+    corner.Parent = circle
+    
+    activeEffects.fv.circleGui = screenGui
+    activeEffects.fv.circleFrame = circle
+end
+
+-- atualizar tamanho do círculo
+local function updateCircleSize(radius)
+    activeEffects.fv.radius = radius
+    if activeEffects.fv.circleFrame then
+        activeEffects.fv.circleFrame.Size = UDim2.new(0, radius, 0, radius)
+        activeEffects.fv.circleFrame.Position = UDim2.new(0.5, -radius/2, 0.5, -radius/2)
+    end
+end
+
+-- remover círculo
+local function removeCircleGui()
+    if activeEffects.fv.circleGui then
+        activeEffects.fv.circleGui:Destroy()
+        activeEffects.fv.circleGui = nil
+        activeEffects.fv.circleFrame = nil
+    end
+end
+
+-- obter a posição da cabeça do player
+local function getHeadPosition(player)
+    if not player or not player.Character then return nil end
+    local character = player.Character
+    local head = character:FindFirstChild("Head")
+    if head then
+        return head.Position
+    end
+    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+    if humanoidRootPart then
+        return humanoidRootPart.Position + Vector3.new(0, 2, 0)
+    end
+    return nil
+end
+
+-- mover câmera suavemente (smooth)
+local function smoothCamera(targetCFrame, speed)
+    local camera = workspace.CurrentCamera
+    local currentCFrame = camera.CFrame
+    local newCFrame = currentCFrame:Lerp(targetCFrame, speed)
+    camera.CFrame = newCFrame
+end
+
+-- função principal do FV
+local function fvLoop()
+    while activeEffects.fv.active do
+        wait(0.05) -- 20 FPS de verificação
+        
+        local localPlayer = game.Players.LocalPlayer
+        if not localPlayer or not localPlayer.Character then 
+            activeEffects.fv.currentTarget = nil
+            goto continue
+        end
+        
+        local localPosition = getHeadPosition(localPlayer)
+        if not localPosition then 
+            activeEffects.fv.currentTarget = nil
+            goto continue
+        end
+        
+        local closestPlayer = nil
+        local closestDistance = activeEffects.fv.radius
+        
+        -- procura o player mais próximo dentro do raio
+        for _, player in pairs(game.Players:GetPlayers()) do
+            if player ~= localPlayer then
+                local headPos = getHeadPosition(player)
+                if headPos then
+                    local distance = (localPosition - headPos).Magnitude
+                    if distance <= activeEffects.fv.radius and distance < closestDistance then
+                        closestDistance = distance
+                        closestPlayer = player
+                    end
+                end
+            end
+        end
+        
+        -- se encontrou um target
+        if closestPlayer then
+            activeEffects.fv.currentTarget = closestPlayer
+            local targetHead = getHeadPosition(closestPlayer)
+            if targetHead then
+                local camera = workspace.CurrentCamera
+                local targetCFrame = CFrame.new(targetHead)
+                
+                if activeEffects.fv.mode == "rg" then
+                    -- modo automático (instantâneo)
+                    camera.CFrame = targetCFrame
+                elseif activeEffects.fv.mode == "lg" then
+                    -- modo smooth (suave)
+                    smoothCamera(targetCFrame, 0.3)
+                end
+            end
+        else
+            activeEffects.fv.currentTarget = nil
+        end
+        
+        ::continue::
+    end
+end
+
+-- controlador do FV
+local function fvControl(state, mode, radius)
+    if state then
+        if activeEffects.fv.active then return end
+        activeEffects.fv.active = true
+        
+        -- define o modo (rg ou lg)
+        if mode then
+            activeEffects.fv.mode = mode
+        end
+        
+        -- define o raio
+        if radius and type(radius) == "number" then
+            activeEffects.fv.radius = radius
+        end
+        
+        print("[FV] ATIVADO - Modo: " .. (activeEffects.fv.mode == "rg" and "Automático" : "Smooth") .. " | Raio: " .. activeEffects.fv.radius)
+        
+        -- cria o círculo na tela
+        createCircleGui()
+        
+        -- inicia o loop em uma thread separada
+        spawn(function()
+            fvLoop()
+        end)
+        
+    else
+        if not activeEffects.fv.active then return end
+        activeEffects.fv.active = false
+        
+        print("[FV] DESATIVADO - removendo foco visual")
+        
+        -- remove o círculo
+        removeCircleGui()
+        activeEffects.fv.currentTarget = nil
+    end
+end
+
+-- comando específico para atualizar o raio do FV
+local function fvSetRadius(radius)
+    if type(radius) == "number" and radius > 0 then
+        activeEffects.fv.radius = radius
+        updateCircleSize(radius)
+        print("[FV] Raio atualizado para: " .. radius)
+    else
+        warn("[FV] Raio inválido:", radius)
+    end
+end
+
+-- comando para mudar o modo
+local function fvSetMode(mode)
+    if mode == "rg" or mode == "lg" then
+        activeEffects.fv.mode = mode
+        print("[FV] Modo alterado para: " .. (mode == "rg" and "Automático" : "Smooth"))
+    else
+        warn("[FV] Modo inválido:", mode, " (Use 'rg' ou 'lg')")
+    end
+end
+
+-- ==================== FUNÇÕES DOS CHAMS (já existentes) ====================
 
 -- função para criar highlight em um player com cor específica
 local function applyHighlight(player, color, colorName)
@@ -26,12 +225,10 @@ local function applyHighlight(player, color, colorName)
     local character = player.Character
     local humanoid = character:FindFirstChild("Humanoid")
     
-    -- só aplica se o player estiver vivo
     if not humanoid or humanoid.Health <= 0 then
         return
     end
     
-    -- remove highlights antigos desse player pra essa cor
     if activeEffects.highlights[player] and activeEffects.highlights[player][colorName] then
         for _, highlight in pairs(activeEffects.highlights[player][colorName]) do
             if highlight and highlight.Parent then
@@ -50,7 +247,6 @@ local function applyHighlight(player, color, colorName)
     highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
     highlight.Parent = character
     
-    -- armazena o highlight
     if not activeEffects.highlights[player] then
         activeEffects.highlights[player] = {}
     end
@@ -60,7 +256,6 @@ local function applyHighlight(player, color, colorName)
     table.insert(activeEffects.highlights[player][colorName], highlight)
 end
 
--- função para remover highlights
 local function removeHighlights(player, colorName)
     if not activeEffects.highlights[player] then 
         return 
@@ -89,7 +284,6 @@ local function removeHighlights(player, colorName)
     end
 end
 
--- função para aplicar em todos os players
 local function applyToAllPlayers(color, colorName)
     local localPlayer = game.Players.LocalPlayer
     
@@ -100,7 +294,6 @@ local function applyToAllPlayers(color, colorName)
     end
 end
 
--- função para remover de todos os players
 local function removeFromAllPlayers(colorName)
     local localPlayer = game.Players.LocalPlayer
     
@@ -111,7 +304,6 @@ local function removeFromAllPlayers(colorName)
     end
 end
 
--- função pra reaplicar highlights em um player (todas as cores ativas)
 local function reapplyHighlightsToPlayer(player)
     if not player or player == game.Players.LocalPlayer then
         return
@@ -128,33 +320,27 @@ local function reapplyHighlightsToPlayer(player)
     end
 end
 
--- observador para players (melhorado)
 local function setupCharacterObserver(player)
     if not player or player == game.Players.LocalPlayer then 
         return 
     end
     
-    -- se já tem observer, não cria de novo
     if activeEffects.observers[player] then
         return
     end
     
     local function onCharacterAdded(character)
-        -- espera o personagem carregar completamente
         wait(0.5)
         
-        -- verifica se o player ainda existe e se tem humanoid vivo
         if player and player.Character == character then
             local humanoid = character:FindFirstChild("Humanoid")
             if humanoid and humanoid.Health > 0 then
-                -- reaplica todas as cores ativas
                 reapplyHighlightsToPlayer(player)
             end
         end
     end
     
     local function onCharacterRemoving()
-        -- remove os highlights quando o personagem morre/é removido
         if states.RChams then
             removeHighlights(player, "R")
         end
@@ -166,28 +352,24 @@ local function setupCharacterObserver(player)
         end
     end
     
-    -- cria os observers
     activeEffects.observers[player] = {
         added = player.CharacterAdded:Connect(onCharacterAdded),
         removing = player.CharacterRemoving:Connect(onCharacterRemoving)
     }
 end
 
--- estados das features
 local states = {
     RChams = false,
     GChams = false,
     BChams = false
 }
 
--- cores
 local colors = {
     R = Color3.fromRGB(255, 0, 0),
     G = Color3.fromRGB(0, 255, 0),
     B = Color3.fromRGB(0, 0, 255)
 }
 
--- função principal do RChams
 local function rChamsControl(state)
     if state then
         if states.RChams then return end
@@ -195,14 +377,12 @@ local function rChamsControl(state)
         
         print("[RChams] ATIVADO - inimigos em vermelho brilhante")
         
-        -- configura observers pra todos os players
         for _, player in pairs(game.Players:GetPlayers()) do
             if player ~= game.Players.LocalPlayer then
                 setupCharacterObserver(player)
             end
         end
         
-        -- aplica em todos os players vivos
         applyToAllPlayers(colors.R, "R")
     else
         if not states.RChams then return end
@@ -213,7 +393,6 @@ local function rChamsControl(state)
     end
 end
 
--- função do GChams
 local function gChamsControl(state)
     if state then
         if states.GChams then return end
@@ -221,7 +400,6 @@ local function gChamsControl(state)
         
         print("[GChams] ATIVADO - inimigos em verde brilhante")
         
-        -- configura observers pra todos os players
         for _, player in pairs(game.Players:GetPlayers()) do
             if player ~= game.Players.LocalPlayer then
                 setupCharacterObserver(player)
@@ -238,7 +416,6 @@ local function gChamsControl(state)
     end
 end
 
--- função do BChams
 local function bChamsControl(state)
     if state then
         if states.BChams then return end
@@ -246,7 +423,6 @@ local function bChamsControl(state)
         
         print("[BChams] ATIVADO - inimigos em azul brilhante")
         
-        -- configura observers pra todos os players
         for _, player in pairs(game.Players:GetPlayers()) do
             if player ~= game.Players.LocalPlayer then
                 setupCharacterObserver(player)
@@ -263,14 +439,11 @@ local function bChamsControl(state)
     end
 end
 
--- eventos globais
 local function onPlayerAdded(player)
     if player == game.Players.LocalPlayer then return end
     
-    -- configura observer pro novo player
     setupCharacterObserver(player)
     
-    -- aplica os efeitos ativos nele
     wait(0.5)
     if states.RChams then
         applyHighlight(player, colors.R, "R")
@@ -296,19 +469,23 @@ local function onPlayerRemoving(player)
     removeHighlights(player)
 end
 
--- conecta eventos
 game.Players.PlayerAdded:Connect(onPlayerAdded)
 game.Players.PlayerRemoving:Connect(onPlayerRemoving)
 
--- tabela de features
+-- ==================== TABELA DE FEATURES ====================
+
 local features = {
     RChams = rChamsControl,
     GChams = gChamsControl,
-    BChams = bChamsControl
+    BChams = bChamsControl,
+    FV = fvControl,
+    FVRadius = fvSetRadius,
+    FVMode = fvSetMode
 }
 
--- listener principal
-event.Event:Connect(function(feature, cmd)
+-- ==================== LISTENER PRINCIPAL ====================
+
+event.Event:Connect(function(feature, cmd, extra)
     if type(feature) ~= "string" or type(cmd) ~= "string" then 
         return 
     end
@@ -319,26 +496,49 @@ event.Event:Connect(function(feature, cmd)
         return
     end
     
-    if cmd == "ON" then
-        featureFunc(true)
-    elseif cmd == "OFF" then
-        featureFunc(false)
-    elseif cmd == "TOGGLE" then
-        if feature == "RChams" then
-            featureFunc(not states.RChams)
-        elseif feature == "GChams" then
-            featureFunc(not states.GChams)
-        elseif feature == "BChams" then
-            featureFunc(not states.BChams)
+    -- Comandos especiais
+    if feature == "FV" then
+        if cmd == "ON" then
+            featureFunc(true, extra, activeEffects.fv.radius)
+        elseif cmd == "OFF" then
+            featureFunc(false)
+        elseif cmd == "TOGGLE" then
+            featureFunc(not activeEffects.fv.active, extra, activeEffects.fv.radius)
         end
+    elseif feature == "FVRadius" then
+        -- comando para mudar o raio: FVRadius, "100"
+        local radius = tonumber(cmd)
+        if radius then
+            featureFunc(radius)
+        end
+    elseif feature == "FVMode" then
+        -- comando para mudar o modo: FVMode, "rg" ou "lg"
+        featureFunc(cmd)
     else
-        warn("Comando inválido:", cmd)
-        return
+        -- comandos normais dos chams
+        if cmd == "ON" then
+            featureFunc(true)
+        elseif cmd == "OFF" then
+            featureFunc(false)
+        elseif cmd == "TOGGLE" then
+            if feature == "RChams" then
+                featureFunc(not states.RChams)
+            elseif feature == "GChams" then
+                featureFunc(not states.GChams)
+            elseif feature == "BChams" then
+                featureFunc(not states.BChams)
+            end
+        else
+            warn("Comando inválido:", cmd)
+            return
+        end
     end
     
-    print("[LISTENER]", feature, cmd)
+    print("[LISTENER]", feature, cmd, extra or "")
 end)
 
 print("[LISTENER] carregado e escutando 🔥")
 print("[COMANDOS] RChams, GChams, BChams: ON, OFF, TOGGLE")
-print("[INFO] Efeitos reaplicam automaticamente quando o player revive!")
+print("[COMANDOS] FV: ON, OFF, TOGGLE (modo, raio)")
+print("[COMANDOS] FVRadius: [numero] - muda o tamanho do círculo")
+print("[COMANDOS] FVMode: rg (automático) | lg (smooth)")
