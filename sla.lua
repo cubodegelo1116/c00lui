@@ -23,6 +23,14 @@ local function applyHighlight(player, color, colorName)
         return 
     end
     
+    local character = player.Character
+    local humanoid = character:FindFirstChild("Humanoid")
+    
+    -- só aplica se o player estiver vivo
+    if not humanoid or humanoid.Health <= 0 then
+        return
+    end
+    
     -- remove highlights antigos desse player pra essa cor
     if activeEffects.highlights[player] and activeEffects.highlights[player][colorName] then
         for _, highlight in pairs(activeEffects.highlights[player][colorName]) do
@@ -33,7 +41,6 @@ local function applyHighlight(player, color, colorName)
         activeEffects.highlights[player][colorName] = nil
     end
     
-    local character = player.Character
     local highlight = Instance.new("Highlight")
     highlight.Name = colorName .. "_Highlight"
     highlight.FillColor = color
@@ -60,7 +67,6 @@ local function removeHighlights(player, colorName)
     end
     
     if colorName then
-        -- remove apenas os highlights de uma cor específica
         if activeEffects.highlights[player][colorName] then
             for _, highlight in pairs(activeEffects.highlights[player][colorName]) do
                 if highlight and highlight.Parent then
@@ -70,7 +76,6 @@ local function removeHighlights(player, colorName)
             activeEffects.highlights[player][colorName] = nil
         end
     else
-        -- remove todos os highlights do player
         for _, colorHighlights in pairs(activeEffects.highlights[player]) do
             if colorHighlights then
                 for _, highlight in pairs(colorHighlights) do
@@ -90,10 +95,7 @@ local function applyToAllPlayers(color, colorName)
     
     for _, player in pairs(game.Players:GetPlayers()) do
         if player ~= localPlayer then
-            local character = player.Character
-            if character and character:FindFirstChild("Humanoid") and character.Humanoid.Health > 0 then
-                applyHighlight(player, color, colorName)
-            end
+            applyHighlight(player, color, colorName)
         end
     end
 end
@@ -109,36 +111,63 @@ local function removeFromAllPlayers(colorName)
     end
 end
 
--- observador para players
-local function setupCharacterObserver(player, color, colorName, stateTable)
+-- função pra reaplicar highlights em um player (todas as cores ativas)
+local function reapplyHighlightsToPlayer(player)
+    if not player or player == game.Players.LocalPlayer then
+        return
+    end
+    
+    if states.RChams then
+        applyHighlight(player, colors.R, "R")
+    end
+    if states.GChams then
+        applyHighlight(player, colors.G, "G")
+    end
+    if states.BChams then
+        applyHighlight(player, colors.B, "B")
+    end
+end
+
+-- observador para players (melhorado)
+local function setupCharacterObserver(player)
     if not player or player == game.Players.LocalPlayer then 
         return 
     end
     
-    -- se já tem observer pra essa cor, não cria de novo
-    if activeEffects.observers[player] and activeEffects.observers[player][colorName] then
+    -- se já tem observer, não cria de novo
+    if activeEffects.observers[player] then
         return
     end
     
     local function onCharacterAdded(character)
+        -- espera o personagem carregar completamente
         wait(0.5)
-        if stateTable[colorName] and player.Character == character and character and character:FindFirstChild("Humanoid") and character.Humanoid.Health > 0 then
-            applyHighlight(player, color, colorName)
+        
+        -- verifica se o player ainda existe e se tem humanoid vivo
+        if player and player.Character == character then
+            local humanoid = character:FindFirstChild("Humanoid")
+            if humanoid and humanoid.Health > 0 then
+                -- reaplica todas as cores ativas
+                reapplyHighlightsToPlayer(player)
+            end
         end
     end
     
     local function onCharacterRemoving()
-        if stateTable[colorName] then
-            removeHighlights(player, colorName)
+        -- remove os highlights quando o personagem morre/é removido
+        if states.RChams then
+            removeHighlights(player, "R")
+        end
+        if states.GChams then
+            removeHighlights(player, "G")
+        end
+        if states.BChams then
+            removeHighlights(player, "B")
         end
     end
     
     -- cria os observers
-    if not activeEffects.observers[player] then
-        activeEffects.observers[player] = {}
-    end
-    
-    activeEffects.observers[player][colorName] = {
+    activeEffects.observers[player] = {
         added = player.CharacterAdded:Connect(onCharacterAdded),
         removing = player.CharacterRemoving:Connect(onCharacterRemoving)
     }
@@ -166,13 +195,15 @@ local function rChamsControl(state)
         
         print("[RChams] ATIVADO - inimigos em vermelho brilhante")
         
-        applyToAllPlayers(colors.R, "R")
-        
+        -- configura observers pra todos os players
         for _, player in pairs(game.Players:GetPlayers()) do
             if player ~= game.Players.LocalPlayer then
-                setupCharacterObserver(player, colors.R, "R", states)
+                setupCharacterObserver(player)
             end
         end
+        
+        -- aplica em todos os players vivos
+        applyToAllPlayers(colors.R, "R")
     else
         if not states.RChams then return end
         states.RChams = false
@@ -190,13 +221,14 @@ local function gChamsControl(state)
         
         print("[GChams] ATIVADO - inimigos em verde brilhante")
         
-        applyToAllPlayers(colors.G, "G")
-        
+        -- configura observers pra todos os players
         for _, player in pairs(game.Players:GetPlayers()) do
             if player ~= game.Players.LocalPlayer then
-                setupCharacterObserver(player, colors.G, "G", states)
+                setupCharacterObserver(player)
             end
         end
+        
+        applyToAllPlayers(colors.G, "G")
     else
         if not states.GChams then return end
         states.GChams = false
@@ -214,13 +246,14 @@ local function bChamsControl(state)
         
         print("[BChams] ATIVADO - inimigos em azul brilhante")
         
-        applyToAllPlayers(colors.B, "B")
-        
+        -- configura observers pra todos os players
         for _, player in pairs(game.Players:GetPlayers()) do
             if player ~= game.Players.LocalPlayer then
-                setupCharacterObserver(player, colors.B, "B", states)
+                setupCharacterObserver(player)
             end
         end
+        
+        applyToAllPlayers(colors.B, "B")
     else
         if not states.BChams then return end
         states.BChams = false
@@ -234,40 +267,29 @@ end
 local function onPlayerAdded(player)
     if player == game.Players.LocalPlayer then return end
     
+    -- configura observer pro novo player
+    setupCharacterObserver(player)
+    
+    -- aplica os efeitos ativos nele
+    wait(0.5)
     if states.RChams then
-        setupCharacterObserver(player, colors.R, "R", states)
-        local character = player.Character
-        if character and character:FindFirstChild("Humanoid") and character.Humanoid.Health > 0 then
-            applyHighlight(player, colors.R, "R")
-        end
+        applyHighlight(player, colors.R, "R")
     end
-    
     if states.GChams then
-        setupCharacterObserver(player, colors.G, "G", states)
-        local character = player.Character
-        if character and character:FindFirstChild("Humanoid") and character.Humanoid.Health > 0 then
-            applyHighlight(player, colors.G, "G")
-        end
+        applyHighlight(player, colors.G, "G")
     end
-    
     if states.BChams then
-        setupCharacterObserver(player, colors.B, "B", states)
-        local character = player.Character
-        if character and character:FindFirstChild("Humanoid") and character.Humanoid.Health > 0 then
-            applyHighlight(player, colors.B, "B")
-        end
+        applyHighlight(player, colors.B, "B")
     end
 end
 
 local function onPlayerRemoving(player)
     if activeEffects.observers[player] then
-        for _, observers in pairs(activeEffects.observers[player]) do
-            if observers.added then
-                observers.added:Disconnect()
-            end
-            if observers.removing then
-                observers.removing:Disconnect()
-            end
+        if activeEffects.observers[player].added then
+            activeEffects.observers[player].added:Disconnect()
+        end
+        if activeEffects.observers[player].removing then
+            activeEffects.observers[player].removing:Disconnect()
         end
         activeEffects.observers[player] = nil
     end
@@ -319,3 +341,4 @@ end)
 
 print("[LISTENER] carregado e escutando 🔥")
 print("[COMANDOS] RChams, GChams, BChams: ON, OFF, TOGGLE")
+print("[INFO] Efeitos reaplicam automaticamente quando o player revive!")
