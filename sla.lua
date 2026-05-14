@@ -130,20 +130,28 @@ local function getSimpleBounds(player)
     if not player or not player.Character then return nil, nil end
     local hrp = player.Character:FindFirstChild("HumanoidRootPart")
     if not hrp then return nil, nil end
+
     local camera = workspace.CurrentCamera
-    local pos    = hrp.Position
-    local w      = 2.0
-    local points = {
-        pos + Vector3.new( w,  3.5, 0),
-        pos + Vector3.new(-w,  3.5, 0),
-        pos + Vector3.new( w, -3.5, 0),
-        pos + Vector3.new(-w, -3.5, 0),
+    local cf     = hrp.CFrame
+    local sx, sy, sz = 2, 3.5, 0.5
+
+    local corners = {
+        cf * Vector3.new( sx,  sy,  sz),
+        cf * Vector3.new(-sx,  sy,  sz),
+        cf * Vector3.new( sx, -sy,  sz),
+        cf * Vector3.new(-sx, -sy,  sz),
+        cf * Vector3.new( sx,  sy, -sz),
+        cf * Vector3.new(-sx,  sy, -sz),
+        cf * Vector3.new( sx, -sy, -sz),
+        cf * Vector3.new(-sx, -sy, -sz),
     }
+
     local minX, minY =  math.huge,  math.huge
     local maxX, maxY = -math.huge, -math.huge
     local any = false
-    for _, point in pairs(points) do
-        local sp, onScreen = camera:WorldToViewportPoint(point)
+
+    for _, corner in pairs(corners) do
+        local sp, onScreen = camera:WorldToViewportPoint(corner)
         if onScreen then
             any  = true
             minX = math.min(minX, sp.X)
@@ -152,6 +160,7 @@ local function getSimpleBounds(player)
             maxY = math.max(maxY, sp.Y)
         end
     end
+
     if not any then return nil, nil end
     return Vector2.new(minX, minY), Vector2.new(maxX, maxY)
 end
@@ -220,10 +229,10 @@ end
 local function removeDrawingsForPlayer(player)
     if not activeEffects.drawings[player] then return end
     local d = activeEffects.drawings[player]
-    if d.line  then d.line:Remove()  end
-    if d.box   then d.box:Remove()   end
-    if d.hp    then d.hp:Remove()    end
-    if d.hpBg  then d.hpBg:Remove() end
+    if d.line   then d.line:Remove()   end
+    if d.box    then d.box:Remove()    end
+    if d.hp     then d.hp:Remove()     end
+    if d.hpBg   then d.hpBg:Remove()  end
     if d.hpText then d.hpText:Remove() end
     activeEffects.drawings[player] = nil
 end
@@ -250,7 +259,7 @@ local function ensureDrawings(player)
         d.line = nil
     end
 
-    -- BOX (Square)
+    -- BOX
     if states.Box and not d.box then
         local b = Drawing.new("Square")
         b.Thickness    = 1
@@ -264,10 +273,10 @@ local function ensureDrawings(player)
         d.box = nil
     end
 
-    -- HP bg
+    -- HP
     if states.HP and not d.hpBg then
         local bg = Drawing.new("Square")
-        bg.Thickness    = 1
+        bg.Thickness    = 0
         bg.Color        = Color3.fromRGB(30, 30, 30)
         bg.Transparency = 0
         bg.Filled       = true
@@ -275,7 +284,7 @@ local function ensureDrawings(player)
         d.hpBg = bg
 
         local hp = Drawing.new("Square")
-        hp.Thickness    = 1
+        hp.Thickness    = 0
         hp.Color        = Color3.fromRGB(0, 255, 0)
         hp.Transparency = 0
         hp.Filled       = true
@@ -283,10 +292,10 @@ local function ensureDrawings(player)
         d.hp = hp
 
         local txt = Drawing.new("Text")
-        txt.Size        = 13
-        txt.Color       = Color3.fromRGB(255, 255, 255)
-        txt.Outline     = true
-        txt.Visible     = false
+        txt.Size    = 13
+        txt.Color   = Color3.fromRGB(255, 255, 255)
+        txt.Outline = true
+        txt.Visible = false
         d.hpText = txt
     elseif not states.HP then
         if d.hp     then d.hp:Remove()     d.hp     = nil end
@@ -314,23 +323,30 @@ local function updateDrawingsForPlayer(player)
     local d = activeEffects.drawings[player]
     if not d then return end
 
-    local camera     = workspace.CurrentCamera
-    local headPos    = getHeadPosition(player)
-    local screenHead = headPos and getScreenPosition(headPos)
-    local tl, br     = getSimpleBounds(player)
+    local camera = workspace.CurrentCamera
+    local tl, br = getSimpleBounds(player)
 
     -- LINE
     if d.line then
-        if screenHead then
-            d.line.From    = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y)
-            d.line.To      = screenHead
-            d.line.Visible = true
+        local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            local screenHRP = getScreenPosition(hrp.Position)
+            if screenHRP then
+                local bottom = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y)
+                if (screenHRP - bottom).Magnitude > 1 then
+                    d.line.From    = bottom
+                    d.line.To      = screenHRP
+                    d.line.Visible = true
+                end
+            else
+                d.line.Visible = false
+            end
         else
             d.line.Visible = false
         end
     end
 
-    -- BOX (Square: Position = canto top-left, Size = largura/altura)
+    -- BOX
     if d.box then
         if tl and br then
             d.box.Position = tl
@@ -351,20 +367,17 @@ local function updateDrawingsForPlayer(player)
             local barW    = 4
             local barX    = tl.X - barW - 3
             local barH    = br.Y - tl.Y
+            local fillH   = math.max(1, barH * ratio)
 
-            -- fundo cinza
             d.hpBg.Position = Vector2.new(barX, tl.Y)
             d.hpBg.Size     = Vector2.new(barW, barH)
             d.hpBg.Visible  = true
 
-            -- barra colorida (de baixo pra cima)
-            local fillH = barH * ratio
             d.hp.Color    = Color3.fromRGB(r, g, 0)
             d.hp.Position = Vector2.new(barX, tl.Y + (barH - fillH))
             d.hp.Size     = Vector2.new(barW, fillH)
             d.hp.Visible  = true
 
-            -- texto com o valor
             d.hpText.Text     = math.floor(health) .. "/" .. math.floor(maxHealth)
             d.hpText.Position = Vector2.new(tl.X, tl.Y - 16)
             d.hpText.Visible  = true
