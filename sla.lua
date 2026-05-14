@@ -141,18 +141,18 @@ local function getSimpleBounds(player)
     }
     local minX, minY =  math.huge,  math.huge
     local maxX, maxY = -math.huge, -math.huge
-    local anyOnScreen = false
+    local any = false
     for _, point in pairs(points) do
         local sp, onScreen = camera:WorldToViewportPoint(point)
         if onScreen then
-            anyOnScreen = true
+            any  = true
             minX = math.min(minX, sp.X)
             minY = math.min(minY, sp.Y)
             maxX = math.max(maxX, sp.X)
             maxY = math.max(maxY, sp.Y)
         end
     end
-    if not anyOnScreen then return nil, nil end
+    if not any then return nil, nil end
     return Vector2.new(minX, minY), Vector2.new(maxX, maxY)
 end
 
@@ -194,8 +194,8 @@ local function removeHighlights(player, colorName)
             activeEffects.highlights[player][colorName] = nil
         end
     else
-        for _, colorHighlights in pairs(activeEffects.highlights[player]) do
-            for _, h in pairs(colorHighlights) do
+        for _, ch in pairs(activeEffects.highlights[player]) do
+            for _, h in pairs(ch) do
                 if h and h.Parent then h:Destroy() end
             end
         end
@@ -221,52 +221,77 @@ local function removeDrawingsForPlayer(player)
     if not activeEffects.drawings[player] then return end
     local d = activeEffects.drawings[player]
     if d.line  then d.line:Remove()  end
+    if d.box   then d.box:Remove()   end
     if d.hp    then d.hp:Remove()    end
     if d.hpBg  then d.hpBg:Remove() end
-    for _, l in pairs(d.box) do l:Remove() end
+    if d.hpText then d.hpText:Remove() end
     activeEffects.drawings[player] = nil
 end
 
 local function ensureDrawings(player)
     if not activeEffects.drawings[player] then
-        activeEffects.drawings[player] = { line = nil, box = {}, hp = nil, hpBg = nil }
+        activeEffects.drawings[player] = {
+            line = nil, box = nil,
+            hp = nil, hpBg = nil, hpText = nil
+        }
     end
     local d = activeEffects.drawings[player]
 
+    -- LINE
     if states.Line and not d.line then
         local l = Drawing.new("Line")
-        l.Thickness = 1  l.Color = Color3.fromRGB(255, 50, 50)
-        l.Transparency = 0  l.Visible = false
+        l.Thickness    = 1
+        l.Color        = Color3.fromRGB(255, 50, 50)
+        l.Transparency = 0
+        l.Visible      = false
         d.line = l
     elseif not states.Line and d.line then
-        d.line:Remove()  d.line = nil
+        d.line:Remove()
+        d.line = nil
     end
 
-    if states.Box and #d.box == 0 then
-        for i = 1, 4 do
-            local l = Drawing.new("Line")
-            l.Thickness = 1  l.Color = Color3.fromRGB(255, 50, 50)
-            l.Transparency = 0  l.Visible = false
-            table.insert(d.box, l)
-        end
-    elseif not states.Box and #d.box > 0 then
-        for _, l in pairs(d.box) do l:Remove() end
-        d.box = {}
+    -- BOX (Square)
+    if states.Box and not d.box then
+        local b = Drawing.new("Square")
+        b.Thickness    = 1
+        b.Color        = Color3.fromRGB(255, 50, 50)
+        b.Transparency = 0
+        b.Filled       = false
+        b.Visible      = false
+        d.box = b
+    elseif not states.Box and d.box then
+        d.box:Remove()
+        d.box = nil
     end
 
-    if states.HP and not d.hp then
-        local bg = Drawing.new("Line")
-        bg.Thickness = 4  bg.Color = Color3.fromRGB(30, 30, 30)
-        bg.Transparency = 0  bg.Visible = false
+    -- HP bg
+    if states.HP and not d.hpBg then
+        local bg = Drawing.new("Square")
+        bg.Thickness    = 1
+        bg.Color        = Color3.fromRGB(30, 30, 30)
+        bg.Transparency = 0
+        bg.Filled       = true
+        bg.Visible      = false
         d.hpBg = bg
 
-        local hp = Drawing.new("Line")
-        hp.Thickness = 4  hp.Color = Color3.fromRGB(0, 255, 0)
-        hp.Transparency = 0  hp.Visible = false
+        local hp = Drawing.new("Square")
+        hp.Thickness    = 1
+        hp.Color        = Color3.fromRGB(0, 255, 0)
+        hp.Transparency = 0
+        hp.Filled       = true
+        hp.Visible      = false
         d.hp = hp
+
+        local txt = Drawing.new("Text")
+        txt.Size        = 13
+        txt.Color       = Color3.fromRGB(255, 255, 255)
+        txt.Outline     = true
+        txt.Visible     = false
+        d.hpText = txt
     elseif not states.HP then
-        if d.hp   then d.hp:Remove()   d.hp   = nil end
-        if d.hpBg then d.hpBg:Remove() d.hpBg = nil end
+        if d.hp     then d.hp:Remove()     d.hp     = nil end
+        if d.hpBg   then d.hpBg:Remove()   d.hpBg   = nil end
+        if d.hpText then d.hpText:Remove() d.hpText = nil end
     end
 end
 
@@ -276,10 +301,11 @@ local function updateDrawingsForPlayer(player)
     if not player.Character then
         if activeEffects.drawings[player] then
             local d = activeEffects.drawings[player]
-            if d.line then d.line.Visible = false end
-            if d.hp   then d.hp.Visible   = false end
-            if d.hpBg then d.hpBg.Visible = false end
-            for _, l in pairs(d.box) do l.Visible = false end
+            if d.line   then d.line.Visible   = false end
+            if d.box    then d.box.Visible    = false end
+            if d.hp     then d.hp.Visible     = false end
+            if d.hpBg   then d.hpBg.Visible   = false end
+            if d.hpText then d.hpText.Visible = false end
         end
         return
     end
@@ -291,6 +317,7 @@ local function updateDrawingsForPlayer(player)
     local camera     = workspace.CurrentCamera
     local headPos    = getHeadPosition(player)
     local screenHead = headPos and getScreenPosition(headPos)
+    local tl, br     = getSimpleBounds(player)
 
     -- LINE
     if d.line then
@@ -303,46 +330,48 @@ local function updateDrawingsForPlayer(player)
         end
     end
 
-    -- BOX + HP
-    if #d.box == 4 or d.hp then
-        local tl, br = getSimpleBounds(player)
-
-        if #d.box == 4 then
-            if tl and br then
-                local tr = Vector2.new(br.X, tl.Y)
-                local bl = Vector2.new(tl.X, br.Y)
-                d.box[1].From = tl  d.box[1].To = tr  d.box[1].Visible = true
-                d.box[2].From = bl  d.box[2].To = br  d.box[2].Visible = true
-                d.box[3].From = tl  d.box[3].To = bl  d.box[3].Visible = true
-                d.box[4].From = tr  d.box[4].To = br  d.box[4].Visible = true
-            else
-                for _, l in pairs(d.box) do l.Visible = false end
-            end
+    -- BOX (Square: Position = canto top-left, Size = largura/altura)
+    if d.box then
+        if tl and br then
+            d.box.Position = tl
+            d.box.Size     = Vector2.new(br.X - tl.X, br.Y - tl.Y)
+            d.box.Visible  = true
+        else
+            d.box.Visible = false
         end
+    end
 
-        if d.hp and d.hpBg then
-            if tl and br then
-                local health, maxHealth = getPlayerHealth(player)
-                local ratio     = maxHealth > 0 and (health / maxHealth) or 0
-                local barX      = tl.X - 6
-                local barTop    = tl.Y
-                local barBot    = br.Y
-                local barHeight = barBot - barTop
-                local r         = math.floor(255 * (1 - ratio))
-                local g         = math.floor(255 * ratio)
+    -- HP
+    if d.hpBg and d.hp and d.hpText then
+        if tl and br then
+            local health, maxHealth = getPlayerHealth(player)
+            local ratio   = maxHealth > 0 and (health / maxHealth) or 0
+            local r       = math.floor(255 * (1 - ratio))
+            local g       = math.floor(255 * ratio)
+            local barW    = 4
+            local barX    = tl.X - barW - 3
+            local barH    = br.Y - tl.Y
 
-                d.hpBg.From    = Vector2.new(barX, barTop)
-                d.hpBg.To      = Vector2.new(barX, barBot)
-                d.hpBg.Visible = true
+            -- fundo cinza
+            d.hpBg.Position = Vector2.new(barX, tl.Y)
+            d.hpBg.Size     = Vector2.new(barW, barH)
+            d.hpBg.Visible  = true
 
-                d.hp.Color   = Color3.fromRGB(r, g, 0)
-                d.hp.From    = Vector2.new(barX, barBot)
-                d.hp.To      = Vector2.new(barX, barBot - barHeight * ratio)
-                d.hp.Visible = true
-            else
-                d.hp.Visible   = false
-                d.hpBg.Visible = false
-            end
+            -- barra colorida (de baixo pra cima)
+            local fillH = barH * ratio
+            d.hp.Color    = Color3.fromRGB(r, g, 0)
+            d.hp.Position = Vector2.new(barX, tl.Y + (barH - fillH))
+            d.hp.Size     = Vector2.new(barW, fillH)
+            d.hp.Visible  = true
+
+            -- texto com o valor
+            d.hpText.Text     = math.floor(health) .. "/" .. math.floor(maxHealth)
+            d.hpText.Position = Vector2.new(tl.X, tl.Y - 16)
+            d.hpText.Visible  = true
+        else
+            d.hp.Visible     = false
+            d.hpBg.Visible   = false
+            d.hpText.Visible = false
         end
     end
 end
@@ -399,10 +428,11 @@ local function setupCharacterObserver(player)
             if states.BChams then removeHighlights(player, "B") end
             if activeEffects.drawings[player] then
                 local d = activeEffects.drawings[player]
-                if d.line then d.line.Visible = false end
-                if d.hp   then d.hp.Visible   = false end
-                if d.hpBg then d.hpBg.Visible = false end
-                for _, l in pairs(d.box) do l.Visible = false end
+                if d.line   then d.line.Visible   = false end
+                if d.box    then d.box.Visible    = false end
+                if d.hp     then d.hp.Visible     = false end
+                if d.hpBg   then d.hpBg.Visible   = false end
+                if d.hpText then d.hpText.Visible = false end
             end
         end)
     }
@@ -506,9 +536,9 @@ local function boxControl(state)
         states.Box = false
         print("[BOX] DESATIVADO")
         for _, p in pairs(game.Players:GetPlayers()) do
-            if activeEffects.drawings[p] then
-                for _, l in pairs(activeEffects.drawings[p].box) do l:Remove() end
-                activeEffects.drawings[p].box = {}
+            if activeEffects.drawings[p] and activeEffects.drawings[p].box then
+                activeEffects.drawings[p].box:Remove()
+                activeEffects.drawings[p].box = nil
             end
         end
         stopDrawLoopIfUnused()
@@ -534,8 +564,9 @@ local function hpControl(state)
         for _, p in pairs(game.Players:GetPlayers()) do
             if activeEffects.drawings[p] then
                 local d = activeEffects.drawings[p]
-                if d.hp   then d.hp:Remove()   d.hp   = nil end
-                if d.hpBg then d.hpBg:Remove() d.hpBg = nil end
+                if d.hp     then d.hp:Remove()     d.hp     = nil end
+                if d.hpBg   then d.hpBg:Remove()   d.hpBg   = nil end
+                if d.hpText then d.hpText:Remove() d.hpText = nil end
             end
         end
         stopDrawLoopIfUnused()
