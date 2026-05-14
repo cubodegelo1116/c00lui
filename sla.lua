@@ -26,8 +26,8 @@ local states = {
     GChams = false,
     BChams = false,
     WCK    = false,
-    Line   = true,
-    Box    = true,
+    Line   = false,
+    Box    = false,
     HP     = false
 }
 
