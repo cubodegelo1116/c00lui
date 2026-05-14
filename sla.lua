@@ -26,8 +26,8 @@ local states = {
     GChams = false,
     BChams = false,
     WCK    = false,
-    Line   = false,
-    Box    = false,
+    Line   = true,
+    Box    = true,
     HP     = false
 }
 
@@ -55,13 +55,11 @@ local function createESP(player)
 
     local d = ESP[player]
 
-    -- Tracer
     d.Tracer.Color        = Color3.fromRGB(255, 50, 50)
     d.Tracer.Thickness    = 1
     d.Tracer.Transparency = 1
     d.Tracer.Visible      = false
 
-    -- Box (4 linhas)
     for i = 1, 4 do
         local line = Drawing.new("Line")
         line.Color        = Color3.fromRGB(255, 50, 50)
@@ -71,21 +69,18 @@ local function createESP(player)
         table.insert(d.Lines, line)
     end
 
-    -- HP bg
     d.HpBg.Filled       = true
     d.HpBg.Color        = Color3.fromRGB(30, 30, 30)
     d.HpBg.Transparency = 1
     d.HpBg.Thickness    = 0
     d.HpBg.Visible      = false
 
-    -- HP bar
     d.Hp.Filled       = true
     d.Hp.Color        = Color3.fromRGB(0, 255, 0)
     d.Hp.Transparency = 1
     d.Hp.Thickness    = 0
     d.Hp.Visible      = false
 
-    -- HP text
     d.HpText.Size    = 13
     d.HpText.Color   = Color3.fromRGB(255, 255, 255)
     d.HpText.Outline = true
@@ -113,24 +108,9 @@ local function hideESP(player)
     for _, l in pairs(d.Lines) do l.Visible = false end
 end
 
--- cria pra quem já tá no jogo
 for _, p in pairs(Players:GetPlayers()) do
     createESP(p)
 end
-
-
-Players.PlayerAdded:Connect(function(player)
-    createESP(player)
-
-    player.CharacterAdded:Connect(function()
-        task.wait(1)
-        createESP(player)
-    end)
-end)
-
-Players.PlayerRemoving:Connect(function(player)
-    removeESP(player)
-end)
 
 -- ==================== RENDER LOOP ESP ====================
 
@@ -143,9 +123,9 @@ RunService.RenderStepped:Connect(function()
             local pos, onScreen = Camera:WorldToViewportPoint(root.Position)
 
             if onScreen then
-                local x    = pos.X
-                local y    = pos.Y
-                local size = math.clamp(2000 / pos.Z, 20, 500)
+                local x     = pos.X
+                local y     = pos.Y
+                local size  = math.clamp(2000 / pos.Z, 20, 500)
                 local halfW = size * 0.4
 
                 local tl = Vector2.new(x - halfW, y - size)
@@ -212,13 +192,14 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- ==================== FV CIRCLE ====================
+-- ==================== FV ====================
 
 local fv = {
     active        = false,
     mode          = "rg",
     radius        = 150,
     currentTarget = nil,
+    lastTarget    = nil,
     circle        = nil,
     connection    = nil
 }
@@ -270,6 +251,109 @@ local function hasLOS(from, to, targetChar)
     if targetChar then table.insert(ex, targetChar) end
     params.FilterDescendantsInstances = ex
     return workspace:Raycast(from, to - from, params) == nil
+end
+
+-- ==================== FV CONTROL ====================
+
+local function fvControl(state, mode)
+    if state then
+        if fv.active then return end
+        fv.active     = true
+        fv.lastTarget = nil
+        if mode then fv.mode = mode end
+        print("[FV] ATIVADO - Modo:", fv.mode, "| Raio:", fv.radius)
+        createCircle()
+
+        fv.connection = RunService.RenderStepped:Connect(function()
+            if not fv.active then return end
+
+            local lp = Players.LocalPlayer
+            if not lp or not lp.Character then
+                fv.currentTarget = nil
+                return
+            end
+
+            local localPos = getHeadPos(lp)
+            if not localPos then
+                fv.currentTarget = nil
+                return
+            end
+
+            local closest, closestDist = nil, fv.radius
+
+            for _, player in pairs(Players:GetPlayers()) do
+                if player ~= lp then
+                    local hp = getHeadPos(player)
+                    if hp then
+                        local sp = getScreenPos(hp)
+                        if sp then
+                            local dist = (sp - Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)).Magnitude
+                            if dist <= fv.radius and dist < closestDist then
+                                local canTarget = true
+                                if states.WCK then
+                                    canTarget = hasLOS(localPos, hp, player.Character)
+                                end
+                                if canTarget then
+                                    closestDist = dist
+                                    closest     = player
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+
+            if closest then
+                fv.currentTarget = closest
+                local hp = getHeadPos(closest)
+                if hp then
+                    local cf = CFrame.new(Camera.CFrame.Position, hp)
+
+                    if fv.mode == "rg" then
+                        Camera.CFrame = cf
+
+                        -- clica no primeiro frame que trava num novo alvo
+                        if closest ~= fv.lastTarget then
+                            fv.lastTarget = closest
+                            mouse1click()
+                        end
+
+                    elseif fv.mode == "lg" then
+                        Camera.CFrame = Camera.CFrame:Lerp(cf, 0.3)
+                    end
+                end
+            else
+                fv.currentTarget = nil
+                fv.lastTarget    = nil
+            end
+        end)
+    else
+        if not fv.active then return end
+        fv.active     = false
+        fv.lastTarget = nil
+        if fv.connection then
+            fv.connection:Disconnect()
+            fv.connection = nil
+        end
+        print("[FV] DESATIVADO")
+        removeCircle()
+        fv.currentTarget = nil
+    end
+end
+
+local function fvSetRadius(radius)
+    if type(radius) == "number" and radius > 0 then
+        fv.radius = radius
+        if fv.circle then fv.circle.Radius = radius end
+        print("[FV] Raio:", radius)
+    end
+end
+
+local function fvSetMode(mode)
+    if mode == "rg" or mode == "lg" then
+        fv.mode = mode
+        print("[FV] Modo:", mode == "rg" and "Automático" or "Smooth")
+    end
 end
 
 -- ==================== CHAMS ====================
@@ -474,82 +558,6 @@ end
 local function wckControl(state)
     states.WCK = state
     print("[WCK]", state and "ATIVADO" or "DESATIVADO")
-end
-
-local function fvControl(state, mode)
-    if state then
-        if fv.active then return end
-        fv.active = true
-        if mode then fv.mode = mode end
-        print("[FV] ATIVADO - Modo:", fv.mode, "| Raio:", fv.radius)
-        createCircle()
-
-        fv.connection = RunService.RenderStepped:Connect(function()
-            if not fv.active then return end
-
-            local lp = Players.LocalPlayer
-            if not lp or not lp.Character then fv.currentTarget = nil return end
-
-            local localPos = getHeadPos(lp)
-            if not localPos then fv.currentTarget = nil return end
-
-            local closest, closestDist = nil, fv.radius
-
-            for _, player in pairs(Players:GetPlayers()) do
-                if player ~= lp then
-                    local hp = getHeadPos(player)
-                    if hp then
-                        local sp = getScreenPos(hp)
-                        if sp then
-                            local dist = (sp - Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)).Magnitude
-                            if dist <= fv.radius and dist < closestDist then
-                                local canTarget = true
-                                if states.WCK then canTarget = hasLOS(localPos, hp, player.Character) end
-                                if canTarget then closestDist = dist closest = player end
-                            end
-                        end
-                    end
-                end
-            end
-
-            if closest then
-                fv.currentTarget = closest
-                local hp = getHeadPos(closest)
-                if hp then
-                    local cf = CFrame.new(Camera.CFrame.Position, hp)
-                    if fv.mode == "rg" then
-                        Camera.CFrame = cf
-                    else
-                        Camera.CFrame = Camera.CFrame:Lerp(cf, 0.3)
-                    end
-                end
-            else
-                fv.currentTarget = nil
-            end
-        end)
-    else
-        if not fv.active then return end
-        fv.active = false
-        if fv.connection then fv.connection:Disconnect() fv.connection = nil end
-        print("[FV] DESATIVADO")
-        removeCircle()
-        fv.currentTarget = nil
-    end
-end
-
-local function fvSetRadius(radius)
-    if type(radius) == "number" and radius > 0 then
-        fv.radius = radius
-        if fv.circle then fv.circle.Radius = radius end
-        print("[FV] Raio:", radius)
-    end
-end
-
-local function fvSetMode(mode)
-    if mode == "rg" or mode == "lg" then
-        fv.mode = mode
-        print("[FV] Modo:", mode == "rg" and "Automático" or "Smooth")
-    end
 end
 
 -- ==================== FEATURES ====================
