@@ -26,8 +26,8 @@ local states = {
     GChams = false,
     BChams = false,
     WCK    = false,
-    Line   = false,
-    Box    = false,
+    Line   = true,
+    Box    = true,
     HP     = false
 }
 
@@ -37,7 +37,7 @@ local colors = {
     B = Color3.fromRGB(0, 0, 255)
 }
 
--- ==================== ESP (base do código que você mandou) ====================
+-- ==================== ESP ====================
 
 local ESP = {}
 
@@ -58,7 +58,7 @@ local function createESP(player)
     -- Tracer
     d.Tracer.Color        = Color3.fromRGB(255, 50, 50)
     d.Tracer.Thickness    = 1
-    d.Tracer.Transparency = 0
+    d.Tracer.Transparency = 1
     d.Tracer.Visible      = false
 
     -- Box (4 linhas)
@@ -66,7 +66,7 @@ local function createESP(player)
         local line = Drawing.new("Line")
         line.Color        = Color3.fromRGB(255, 50, 50)
         line.Thickness    = 1
-        line.Transparency = 0
+        line.Transparency = 1
         line.Visible      = false
         table.insert(d.Lines, line)
     end
@@ -74,14 +74,14 @@ local function createESP(player)
     -- HP bg
     d.HpBg.Filled       = true
     d.HpBg.Color        = Color3.fromRGB(30, 30, 30)
-    d.HpBg.Transparency = 0
+    d.HpBg.Transparency = 1
     d.HpBg.Thickness    = 0
     d.HpBg.Visible      = false
 
     -- HP bar
     d.Hp.Filled       = true
     d.Hp.Color        = Color3.fromRGB(0, 255, 0)
-    d.Hp.Transparency = 0
+    d.Hp.Transparency = 1
     d.Hp.Thickness    = 0
     d.Hp.Visible      = false
 
@@ -118,6 +118,20 @@ for _, p in pairs(Players:GetPlayers()) do
     createESP(p)
 end
 
+
+Players.PlayerAdded:Connect(function(player)
+    createESP(player)
+
+    player.CharacterAdded:Connect(function()
+        task.wait(1)
+        createESP(player)
+    end)
+end)
+
+Players.PlayerRemoving:Connect(function(player)
+    removeESP(player)
+end)
+
 -- ==================== RENDER LOOP ESP ====================
 
 RunService.RenderStepped:Connect(function()
@@ -129,9 +143,8 @@ RunService.RenderStepped:Connect(function()
             local pos, onScreen = Camera:WorldToViewportPoint(root.Position)
 
             if onScreen then
-                local x = pos.X
-                local y = pos.Y
-                -- tamanho da box baseado na distância
+                local x    = pos.X
+                local y    = pos.Y
                 local size = math.clamp(2000 / pos.Z, 20, 500)
                 local halfW = size * 0.4
 
@@ -163,13 +176,13 @@ RunService.RenderStepped:Connect(function()
                 if states.HP then
                     local hum = char:FindFirstChild("Humanoid")
                     if hum then
-                        local ratio  = math.clamp(hum.Health / hum.MaxHealth, 0, 1)
-                        local r      = math.floor(255 * (1 - ratio))
-                        local g      = math.floor(255 * ratio)
-                        local barW   = 4
-                        local barX   = tl.X - barW - 3
-                        local barH   = bl.Y - tl.Y
-                        local fillH  = math.max(1, barH * ratio)
+                        local ratio = math.clamp(hum.Health / hum.MaxHealth, 0, 1)
+                        local r     = math.floor(255 * (1 - ratio))
+                        local g     = math.floor(255 * ratio)
+                        local barW  = 4
+                        local barX  = tl.X - barW - 3
+                        local barH  = bl.Y - tl.Y
+                        local fillH = math.max(1, barH * ratio)
 
                         data.HpBg.Position = Vector2.new(barX, tl.Y)
                         data.HpBg.Size     = Vector2.new(barW, barH)
@@ -218,7 +231,7 @@ local function createCircle()
     c.Color        = Color3.fromRGB(255, 50, 50)
     c.Filled       = false
     c.Visible      = true
-    c.Transparency = 0.7
+    c.Transparency = 1
     c.NumSides     = 64
     c.Position     = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
     fv.circle = c
@@ -350,8 +363,6 @@ local function setupObserver(player)
         end)
     }
 end
-
--- ==================== PLAYER ADDED / REMOVING ====================
 
 for _, p in pairs(Players:GetPlayers()) do
     if p ~= Players.LocalPlayer then setupObserver(p) end
@@ -492,9 +503,9 @@ local function fvControl(state, mode)
                         if sp then
                             local dist = (sp - Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)).Magnitude
                             if dist <= fv.radius and dist < closestDist then
-                                local ok2 = true
-                                if states.WCK then ok2 = hasLOS(localPos, hp, player.Character) end
-                                if ok2 then closestDist = dist closest = player end
+                                local canTarget = true
+                                if states.WCK then canTarget = hasLOS(localPos, hp, player.Character) end
+                                if canTarget then closestDist = dist closest = player end
                             end
                         end
                     end
@@ -565,7 +576,7 @@ event.Event:Connect(function(feature, cmd, extra)
     if not fn then warn("Feature não existe:", feature) return end
 
     if feature == "FV" then
-        if cmd == "ON"     then fn(true, extra)
+        if cmd == "ON"         then fn(true, extra)
         elseif cmd == "OFF"    then fn(false)
         elseif cmd == "TOGGLE" then fn(not fv.active, extra) end
     elseif feature == "FVRadius" then
@@ -574,7 +585,7 @@ event.Event:Connect(function(feature, cmd, extra)
     elseif feature == "FVMode" then
         fn(cmd)
     else
-        if cmd == "ON"     then fn(true)
+        if cmd == "ON"         then fn(true)
         elseif cmd == "OFF"    then fn(false)
         elseif cmd == "TOGGLE" then fn(not states[feature])
         else warn("Comando inválido:", cmd) end
