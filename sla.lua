@@ -17,6 +17,7 @@ local event      = Instance.new("BindableEvent")
 local RunService = game:GetService("RunService")
 local Players    = game:GetService("Players")
 local Camera     = workspace.CurrentCamera
+local UserInputService = game:GetService("UserInputService")
 genv.ListenerEvent = event
 
 -- ==================== ESTADOS ====================
@@ -28,7 +29,8 @@ local states = {
     WCK    = false,
     Line   = false,
     Box    = false,
-    HP     = false
+    HP     = false,
+    Float  = false
 }
 
 local colors = {
@@ -36,6 +38,140 @@ local colors = {
     G = Color3.fromRGB(0, 255, 0),
     B = Color3.fromRGB(0, 0, 255)
 }
+
+-- ==================== FLOAT ====================
+
+local floatData = {
+    active = false,
+    speed = 5,
+    connection = nil,
+    bodyVelocity = nil
+}
+
+local function createFloatBody(character)
+    if not character then return nil end
+    
+    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+    if not humanoidRootPart then return nil end
+    
+    -- Remove existing BodyVelocity if any
+    if floatData.bodyVelocity and floatData.bodyVelocity.Parent then
+        floatData.bodyVelocity:Destroy()
+    end
+    
+    local bodyVelocity = Instance.new("BodyVelocity")
+    bodyVelocity.MaxForce = Vector3.new(0, math.huge, 0)
+    bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+    bodyVelocity.Parent = humanoidRootPart
+    
+    return bodyVelocity
+end
+
+local function startFloat()
+    if floatData.active then return end
+    
+    local player = Players.LocalPlayer
+    if not player or not player.Character then
+        warn("[FLOAT] Personagem não encontrado")
+        return
+    end
+    
+    local humanoid = player.Character:FindFirstChild("Humanoid")
+    if not humanoid then
+        warn("[FLOAT] Humanoid não encontrado")
+        return
+    end
+    
+    -- Criar BodyVelocity para controle de voo
+    floatData.bodyVelocity = createFloatBody(player.Character)
+    
+    if not floatData.bodyVelocity then
+        warn("[FLOAT] Falha ao criar BodyVelocity")
+        return
+    end
+    
+    -- Desabilitar gravidade no humanoid
+    humanoid:SetStateEnabled(Enum.HumanoidStateType.Freefall, false)
+    humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, false)
+    humanoid:SetStateEnabled(Enum.HumanoidStateType.Climbing, false)
+    humanoid.PlatformStand = true
+    
+    floatData.active = true
+    floatData.connection = RunService.RenderStepped:Connect(function()
+        if not floatData.active then return end
+        
+        local currentChar = Players.LocalPlayer.Character
+        if not currentChar then return end
+        
+        local rootPart = currentChar:FindFirstChild("HumanoidRootPart")
+        if not rootPart then return end
+        
+        -- Atualizar BodyVelocity se necessário
+        if not floatData.bodyVelocity or not floatData.bodyVelocity.Parent then
+            floatData.bodyVelocity = createFloatBody(currentChar)
+        end
+        
+        -- Controles de subir e descer
+        if UserInputService:IsKeyDown(Enum.KeyCode.E) then
+            if floatData.bodyVelocity then
+                floatData.bodyVelocity.Velocity = Vector3.new(0, floatData.speed, 0)
+            end
+        elseif UserInputService:IsKeyDown(Enum.KeyCode.Q) then
+            if floatData.bodyVelocity then
+                floatData.bodyVelocity.Velocity = Vector3.new(0, -floatData.speed, 0)
+            end
+        else
+            if floatData.bodyVelocity then
+                floatData.bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+            end
+        end
+    end)
+    
+    print("[FLOAT] ATIVADO - Pressione E para subir, Q para descer")
+end
+
+local function stopFloat()
+    if not floatData.active then return end
+    
+    if floatData.connection then
+        floatData.connection:Disconnect()
+        floatData.connection = nil
+    end
+    
+    if floatData.bodyVelocity then
+        floatData.bodyVelocity:Destroy()
+        floatData.bodyVelocity = nil
+    end
+    
+    local player = Players.LocalPlayer
+    if player and player.Character then
+        local humanoid = player.Character:FindFirstChild("Humanoid")
+        if humanoid then
+            humanoid:SetStateEnabled(Enum.HumanoidStateType.Freefall, true)
+            humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, true)
+            humanoid:SetStateEnabled(Enum.HumanoidStateType.Climbing, true)
+            humanoid.PlatformStand = false
+        end
+    end
+    
+    floatData.active = false
+    print("[FLOAT] DESATIVADO")
+end
+
+local function setFloatSpeed(speed)
+    if type(speed) == "number" and speed > 0 then
+        floatData.speed = math.clamp(speed, 1, 50)
+        print("[FLOAT] Velocidade ajustada para:", floatData.speed)
+    end
+end
+
+local function floatControl(state)
+    if state then
+        startFloat()
+    else
+        stopFloat()
+    end
+end
 
 -- ==================== ESP ====================
 
@@ -572,7 +708,9 @@ local features = {
     WCK      = wckControl,
     Line     = lineControl,
     Box      = boxControl,
-    HP       = hpControl
+    HP       = hpControl,
+    Float    = floatControl,
+    FloatSpeed = setFloatSpeed
 }
 
 -- ==================== LISTENER ====================
@@ -592,6 +730,13 @@ event.Event:Connect(function(feature, cmd, extra)
         if r then fn(r) end
     elseif feature == "FVMode" then
         fn(cmd)
+    elseif feature == "Float" then
+        if cmd == "ON"         then fn(true)
+        elseif cmd == "OFF"    then fn(false)
+        elseif cmd == "TOGGLE" then fn(not floatData.active) end
+    elseif feature == "FloatSpeed" then
+        local s = tonumber(cmd)
+        if s then fn(s) end
     else
         if cmd == "ON"         then fn(true)
         elseif cmd == "OFF"    then fn(false)
@@ -603,5 +748,6 @@ event.Event:Connect(function(feature, cmd, extra)
 end)
 
 print("[LISTENER] carregado 🔥")
-print("[COMANDOS] RChams, GChams, BChams, WCK, Line, Box, HP: ON, OFF, TOGGLE")
+print("[COMANDOS] RChams, GChams, BChams, WCK, Line, Box, HP, Float: ON, OFF, TOGGLE")
 print("[COMANDOS] FV: ON, OFF, TOGGLE | FVRadius: [numero] | FVMode: rg / lg")
+print("[COMANDOS] FloatSpeed: [numero 1-50]")
