@@ -31,8 +31,7 @@ local states = {
     Line   = false,
     Box    = false,
     HP     = false,
-    Float  = false,
-    Fly    = false
+    Fly    = false  -- Fly unificado (float + voo)
 }
 
 local colors = {
@@ -41,119 +40,17 @@ local colors = {
     B = Color3.fromRGB(0, 0, 255)
 }
 
--- ==================== FLOAT (Parado no ar) ====================
-
-local floatData = {
-    active = false,
-    keybind = "V",
-    bodyVelocity = nil,
-    originalGravity = nil,
-    connection = nil
-}
-
-local function createFloatBody(character)
-    if not character then return nil end
-    
-    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
-    if not humanoidRootPart then return nil end
-    
-    -- Remove existing BodyVelocity if any
-    if floatData.bodyVelocity and floatData.bodyVelocity.Parent then
-        floatData.bodyVelocity:Destroy()
-    end
-    
-    local bodyVelocity = Instance.new("BodyVelocity")
-    bodyVelocity.MaxForce = Vector3.new(0, math.huge, 0)
-    bodyVelocity.Velocity = Vector3.new(0, 0, 0)
-    bodyVelocity.Parent = humanoidRootPart
-    
-    return bodyVelocity
-end
-
-local function startFloat()
-    if floatData.active then return end
-    
-    local player = Players.LocalPlayer
-    if not player or not player.Character then
-        warn("[FLOAT] Personagem não encontrado")
-        return
-    end
-    
-    local humanoid = player.Character:FindFirstChild("Humanoid")
-    if not humanoid then
-        warn("[FLOAT] Humanoid não encontrado")
-        return
-    end
-    
-    -- Desabilitar gravidade (opção 1)
-    floatData.originalGravity = workspace.Gravity
-    workspace.Gravity = 0
-    
-    -- Criar BodyVelocity para manter posição (opção 2)
-    floatData.bodyVelocity = createFloatBody(player.Character)
-    
-    if not floatData.bodyVelocity then
-        warn("[FLOAT] Falha ao criar BodyVelocity")
-        return
-    end
-    
-    -- Desabilitar estados do humanoid
-    humanoid:SetStateEnabled(Enum.HumanoidStateType.Freefall, false)
-    humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, false)
-    humanoid:SetStateEnabled(Enum.HumanoidStateType.Climbing, false)
-    humanoid.PlatformStand = true
-    
-    floatData.active = true
-    
-    print("[FLOAT] ATIVADO - Pressione " .. floatData.keybind .. " para desativar")
-    print("[FLOAT] Você está parado no ar!")
-end
-
-local function stopFloat()
-    if not floatData.active then return end
-    
-    -- Restaurar gravidade original
-    if floatData.originalGravity then
-        workspace.Gravity = floatData.originalGravity
-        floatData.originalGravity = nil
-    end
-    
-    -- Remover BodyVelocity
-    if floatData.bodyVelocity then
-        floatData.bodyVelocity:Destroy()
-        floatData.bodyVelocity = nil
-    end
-    
-    local player = Players.LocalPlayer
-    if player and player.Character then
-        local humanoid = player.Character:FindFirstChild("Humanoid")
-        if humanoid then
-            humanoid:SetStateEnabled(Enum.HumanoidStateType.Freefall, true)
-            humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, true)
-            humanoid:SetStateEnabled(Enum.HumanoidStateType.Climbing, true)
-            humanoid.PlatformStand = false
-        end
-    end
-    
-    floatData.active = false
-    print("[FLOAT] DESATIVADO")
-end
-
-local function floatControl(state)
-    if state then
-        startFloat()
-    else
-        stopFloat()
-    end
-end
-
--- ==================== FLY (Voo livre com WASD) ====================
+-- ==================== FLY + FLOAT UNIFICADO ====================
+-- Uma função só: 
+-- - Quando ativado, fica parado no ar (float)
+-- - Apertou WASD = voa (fly)
+-- - Soltou WASD = para no ar de novo
 
 local flyData = {
     active = false,
-    bypass = false,
     speed = 50,
     bodyVelocity = nil,
+    originalGravity = nil,
     connection = nil,
     movingDirections = {
         forward = false,
@@ -165,61 +62,26 @@ local flyData = {
     }
 }
 
-local function updateFlyVelocity()
-    if not flyData.active then return end
+local function createFlyBodyVelocity(character)
+    if not character then return nil end
     
-    local player = Players.LocalPlayer
-    if not player or not player.Character then return end
+    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+    if not humanoidRootPart then return nil end
     
-    local rootPart = player.Character:FindFirstChild("HumanoidRootPart")
-    if not rootPart then return end
-    
-    if not flyData.bodyVelocity or not flyData.bodyVelocity.Parent then
-        flyData.bodyVelocity = Instance.new("BodyVelocity")
-        flyData.bodyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-        flyData.bodyVelocity.Parent = rootPart
+    if flyData.bodyVelocity and flyData.bodyVelocity.Parent then
+        flyData.bodyVelocity:Destroy()
     end
     
-    local moveDirection = Vector3.new(0, 0, 0)
-    local cameraCFrame = Camera.CFrame
+    local bodyVelocity = Instance.new("BodyVelocity")
+    bodyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+    bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+    bodyVelocity.Parent = humanoidRootPart
     
-    -- Forward/Backward (W/S)
-    if flyData.movingDirections.forward then
-        moveDirection = moveDirection + cameraCFrame.LookVector
-    end
-    if flyData.movingDirections.backward then
-        moveDirection = moveDirection - cameraCFrame.LookVector
-    end
-    
-    -- Left/Right (A/D)
-    if flyData.movingDirections.left then
-        moveDirection = moveDirection - cameraCFrame.RightVector
-    end
-    if flyData.movingDirections.right then
-        moveDirection = moveDirection + cameraCFrame.RightVector
-    end
-    
-    -- Up/Down (Space/Ctrl)
-    if flyData.movingDirections.up then
-        moveDirection = moveDirection + Vector3.new(0, 1, 0)
-    end
-    if flyData.movingDirections.down then
-        moveDirection = moveDirection - Vector3.new(0, 1, 0)
-    end
-    
-    -- Normalizar e aplicar velocidade
-    if moveDirection.Magnitude > 0 then
-        moveDirection = moveDirection.Unit * flyData.speed
-    end
-    
-    if flyData.bodyVelocity then
-        flyData.bodyVelocity.Velocity = moveDirection
-    end
+    return bodyVelocity
 end
 
 local function setupFlyInputs()
-    -- Contexto para voo
-    local flyContext = "FlyContext"
+    local context = "FlyContext"
     
     local function handleAction(actionName, inputState, inputObject)
         if not flyData.active then return Enum.ContextActionResult.Pass end
@@ -257,13 +119,12 @@ local function setupFlyInputs()
         return Enum.ContextActionResult.Sink
     end
     
-    -- Bind das teclas
-    ContextActionService:BindActionAtPriority(flyContext .. "Forward", handleAction, false, Enum.ContextActionPriority.High.Value, Enum.KeyCode.W)
-    ContextActionService:BindActionAtPriority(flyContext .. "Backward", handleAction, false, Enum.ContextActionPriority.High.Value, Enum.KeyCode.S)
-    ContextActionService:BindActionAtPriority(flyContext .. "Left", handleAction, false, Enum.ContextActionPriority.High.Value, Enum.KeyCode.A)
-    ContextActionService:BindActionAtPriority(flyContext .. "Right", handleAction, false, Enum.ContextActionPriority.High.Value, Enum.KeyCode.D)
-    ContextActionService:BindActionAtPriority(flyContext .. "Up", handleAction, false, Enum.ContextActionPriority.High.Value, Enum.KeyCode.Space)
-    ContextActionService:BindActionAtPriority(flyContext .. "Down", handleAction, false, Enum.ContextActionPriority.High.Value, Enum.KeyCode.LeftControl)
+    ContextActionService:BindActionAtPriority(context .. "Forward", handleAction, false, Enum.ContextActionPriority.High.Value, Enum.KeyCode.W)
+    ContextActionService:BindActionAtPriority(context .. "Backward", handleAction, false, Enum.ContextActionPriority.High.Value, Enum.KeyCode.S)
+    ContextActionService:BindActionAtPriority(context .. "Left", handleAction, false, Enum.ContextActionPriority.High.Value, Enum.KeyCode.A)
+    ContextActionService:BindActionAtPriority(context .. "Right", handleAction, false, Enum.ContextActionPriority.High.Value, Enum.KeyCode.D)
+    ContextActionService:BindActionAtPriority(context .. "Up", handleAction, false, Enum.ContextActionPriority.High.Value, Enum.KeyCode.Space)
+    ContextActionService:BindActionAtPriority(context .. "Down", handleAction, false, Enum.ContextActionPriority.High.Value, Enum.KeyCode.LeftControl)
 end
 
 local function removeFlyInputs()
@@ -273,6 +134,65 @@ local function removeFlyInputs()
     ContextActionService:UnbindAction("FlyContextRight")
     ContextActionService:UnbindAction("FlyContextUp")
     ContextActionService:UnbindAction("FlyContextDown")
+end
+
+local function updateFlyVelocity()
+    if not flyData.active then return end
+    
+    local player = Players.LocalPlayer
+    if not player or not player.Character then return end
+    
+    local rootPart = player.Character:FindFirstChild("HumanoidRootPart")
+    if not rootPart then return end
+    
+    if not flyData.bodyVelocity or not flyData.bodyVelocity.Parent then
+        flyData.bodyVelocity = createFlyBodyVelocity(player.Character)
+    end
+    
+    -- Verifica se tem alguma tecla pressionada
+    local hasInput = false
+    for _, v in pairs(flyData.movingDirections) do
+        if v then hasInput = true break end
+    end
+    
+    if not hasInput then
+        -- Nenhuma tecla: fica PARADO no ar (FLOAT)
+        if flyData.bodyVelocity then
+            flyData.bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+        end
+        return
+    end
+    
+    -- Tem tecla pressionada: VOA (FLY)
+    local moveDirection = Vector3.new(0, 0, 0)
+    local cameraCFrame = Camera.CFrame
+    
+    if flyData.movingDirections.forward then
+        moveDirection = moveDirection + cameraCFrame.LookVector
+    end
+    if flyData.movingDirections.backward then
+        moveDirection = moveDirection - cameraCFrame.LookVector
+    end
+    if flyData.movingDirections.left then
+        moveDirection = moveDirection - cameraCFrame.RightVector
+    end
+    if flyData.movingDirections.right then
+        moveDirection = moveDirection + cameraCFrame.RightVector
+    end
+    if flyData.movingDirections.up then
+        moveDirection = moveDirection + Vector3.new(0, 1, 0)
+    end
+    if flyData.movingDirections.down then
+        moveDirection = moveDirection - Vector3.new(0, 1, 0)
+    end
+    
+    if moveDirection.Magnitude > 0 then
+        moveDirection = moveDirection.Unit * flyData.speed
+    end
+    
+    if flyData.bodyVelocity then
+        flyData.bodyVelocity.Velocity = moveDirection
+    end
 end
 
 local function startFly()
@@ -290,18 +210,16 @@ local function startFly()
         return
     end
     
-    -- Desabilitar gravidade
-    if flyData.bypass then
-        workspace.Gravity = 0
-    end
+    -- Salvar gravidade original e zerar
+    flyData.originalGravity = workspace.Gravity
+    workspace.Gravity = 0
     
     -- Criar BodyVelocity
-    local rootPart = player.Character:FindFirstChild("HumanoidRootPart")
-    if rootPart then
-        flyData.bodyVelocity = Instance.new("BodyVelocity")
-        flyData.bodyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-        flyData.bodyVelocity.Velocity = Vector3.new(0, 0, 0)
-        flyData.bodyVelocity.Parent = rootPart
+    flyData.bodyVelocity = createFlyBodyVelocity(player.Character)
+    
+    if not flyData.bodyVelocity then
+        warn("[FLY] Falha ao criar BodyVelocity")
+        return
     end
     
     -- Desabilitar estados do humanoid
@@ -318,9 +236,9 @@ local function startFly()
     -- Conectar loop de atualização
     flyData.connection = RunService.RenderStepped:Connect(updateFlyVelocity)
     
-    print("[FLY] ATIVADO")
+    print("[FLY] ATIVADO - Modo UNIFICADO (Float + Fly)")
     print("[FLY] Velocidade:", flyData.speed)
-    print("[FLY] WASD para mover, ESPAÇO para subir, CTRL para descer")
+    print("[FLY] Sem teclas = flutua | WASD = voa | Espaço/Ctrl = sobe/desce")
 end
 
 local function stopFly()
@@ -332,8 +250,11 @@ local function stopFly()
         flyData.bodyVelocity = nil
     end
     
-    -- Restaurar gravidade se necessário
-    if flyData.bypass then
+    -- Restaurar gravidade
+    if flyData.originalGravity then
+        workspace.Gravity = flyData.originalGravity
+        flyData.originalGravity = nil
+    else
         workspace.Gravity = 196.2
     end
     
@@ -357,16 +278,17 @@ local function stopFly()
         flyData.connection = nil
     end
     
+    -- Resetar direções
+    for k in pairs(flyData.movingDirections) do
+        flyData.movingDirections[k] = false
+    end
+    
     flyData.active = false
     print("[FLY] DESATIVADO")
 end
 
 local function flyControl(state)
     if state then
-        -- Se float estiver ativo, desativa primeiro
-        if floatData.active then
-            stopFloat()
-        end
         startFly()
     else
         stopFly()
@@ -374,15 +296,10 @@ local function flyControl(state)
 end
 
 local function setFlySpeed(speed)
-    if type(speed) == "number" then
+    if type(speed) == "number" and speed > 0 then
         flyData.speed = math.clamp(speed, 10, 500)
         print("[FLY] Velocidade ajustada para:", flyData.speed)
     end
-end
-
-local function setFlyBypass(state)
-    flyData.bypass = state
-    print("[FLY] Bypass:", state and "ATIVADO" or "DESATIVADO")
 end
 
 -- ==================== ESP ====================
@@ -660,7 +577,6 @@ local function fvControl(state, mode)
                     if fv.mode == "rg" then
                         Camera.CFrame = cf
 
-                        -- clica no primeiro frame que trava num novo alvo
                         if closest ~= fv.lastTarget then
                             fv.lastTarget = closest
                             mouse1click()
@@ -820,26 +736,6 @@ Players.PlayerRemoving:Connect(function(player)
     removeESP(player)
 end)
 
--- ==================== KEYBIND PARA FLOAT (V) ====================
-
-ContextActionService:BindAction("FloatToggle", function(actionName, inputState, inputObject)
-    if inputState == Enum.UserInputState.Begin then
-        if states.Float then
-            floatControl(false)
-            states.Float = false
-        else
-            -- Desativar fly se estiver ativo
-            if flyData.active then
-                flyControl(false)
-                states.Fly = false
-            end
-            floatControl(true)
-            states.Float = true
-        end
-    end
-    return Enum.ContextActionResult.Sink
-end, false, Enum.KeyCode.V)
-
 -- ==================== FEATURE CONTROLS ====================
 
 local function rChamsControl(state)
@@ -941,10 +837,8 @@ local features = {
     Line     = lineControl,
     Box      = boxControl,
     HP       = hpControl,
-    Float    = floatControl,
     Fly      = flyControl,
-    FlySpeed = setFlySpeed,
-    FlyBypass = setFlyBypass
+    FlySpeed = setFlySpeed
 }
 
 -- ==================== LISTENER ====================
@@ -964,47 +858,20 @@ event.Event:Connect(function(feature, cmd, extra)
         if r then fn(r) end
     elseif feature == "FVMode" then
         fn(cmd)
-    elseif feature == "FlySpeed" then
-        local s = tonumber(cmd)
-        if s then fn(s) end
-    elseif feature == "FlyBypass" then
-        fn(cmd == "ON" or cmd == "true")
-    elseif feature == "Float" then
-        if cmd == "ON" then
-            if flyData.active then flyControl(false) states.Fly = false end
-            fn(true)
-            states.Float = true
-        elseif cmd == "OFF" then
-            fn(false)
-            states.Float = false
-        elseif cmd == "TOGGLE" then
-            if states.Float then
-                fn(false)
-                states.Float = false
-            else
-                if flyData.active then flyControl(false) states.Fly = false end
-                fn(true)
-                states.Float = true
-            end
-        end
     elseif feature == "Fly" then
         if cmd == "ON" then
-            if states.Float then floatControl(false) states.Float = false end
             fn(true)
             states.Fly = true
         elseif cmd == "OFF" then
             fn(false)
             states.Fly = false
         elseif cmd == "TOGGLE" then
-            if states.Fly then
-                fn(false)
-                states.Fly = false
-            else
-                if states.Float then floatControl(false) states.Float = false end
-                fn(true)
-                states.Fly = true
-            end
+            fn(not states.Fly)
+            states.Fly = not states.Fly
         end
+    elseif feature == "FlySpeed" then
+        local s = tonumber(cmd)
+        if s then fn(s) end
     else
         if cmd == "ON"         then fn(true)
         elseif cmd == "OFF"    then fn(false)
@@ -1018,5 +885,5 @@ end)
 print("[LISTENER] carregado 🔥")
 print("[COMANDOS] RChams, GChams, BChams, WCK, Line, Box, HP: ON, OFF, TOGGLE")
 print("[COMANDOS] FV: ON, OFF, TOGGLE | FVRadius: [numero] | FVMode: rg / lg")
-print("[COMANDOS] Float: ON, OFF, TOGGLE (ou aperte V)")
-print("[COMANDOS] Fly: ON, OFF, TOGGLE | FlySpeed: [numero] | FlyBypass: ON/OFF")
+print("[COMANDOS] Fly: ON, OFF, TOGGLE | FlySpeed: [numero]")
+print("[FLY UNIFICADO] Sem teclas = flutua (FLOAT) | WASD = voa (FLY) | Espaço/Ctrl = sobe/desce")
