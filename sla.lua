@@ -111,23 +111,29 @@ local function startFloat()
             floatData.bodyVelocity = createFloatBody(currentChar)
         end
         
-        -- Controles de subir e descer
-        if UserInputService:IsKeyDown(Enum.KeyCode.E) then
+        -- Controles: Espaço para subir, Ctrl para descer
+        local upPressed = UserInputService:IsKeyDown(Enum.KeyCode.Space)
+        local downPressed = UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) or UserInputService:IsKeyDown(Enum.KeyCode.RightControl)
+        
+        if upPressed and not downPressed then
+            -- Subir
             if floatData.bodyVelocity then
                 floatData.bodyVelocity.Velocity = Vector3.new(0, floatData.speed, 0)
             end
-        elseif UserInputService:IsKeyDown(Enum.KeyCode.Q) then
+        elseif downPressed and not upPressed then
+            -- Descer
             if floatData.bodyVelocity then
                 floatData.bodyVelocity.Velocity = Vector3.new(0, -floatData.speed, 0)
             end
         else
+            -- Parar (nenhuma tecla ou ambas pressionadas)
             if floatData.bodyVelocity then
                 floatData.bodyVelocity.Velocity = Vector3.new(0, 0, 0)
             end
         end
     end)
     
-    print("[FLOAT] ATIVADO - Pressione E para subir, Q para descer")
+    print("[FLOAT] ATIVADO - Pressione ESPAÇO para subir, CTRL para descer")
 end
 
 local function stopFloat()
@@ -172,7 +178,6 @@ local function floatControl(state)
         stopFloat()
     end
 end
-
 -- ==================== ESP ====================
 
 local ESP = {}
